@@ -56,12 +56,20 @@ export default function KPICards({ data, loading }) {
       bg: 'bg-teal-50',
       border: 'border-teal-200'
     },
+    {
+      label: 'Active Hotspots',
+      value: data?.activeHotspots ?? '—',
+      icon: '🔥',
+      color: 'text-rose-700',
+      bg: 'bg-rose-50',
+      border: 'border-rose-200'
+    },
   ];
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        {[...Array(7)].map((_, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        {[...Array(8)].map((_, i) => (
           <div key={i} className="card p-4 animate-pulse">
             <div className="h-8 bg-slate-200 rounded mb-2" />
             <div className="h-4 bg-slate-100 rounded w-3/4" />
@@ -77,7 +85,7 @@ export default function KPICards({ data, loading }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {cards.map((card) => (
           <div key={card.label} className={`card p-4 border ${card.border} ${card.bg} animate-fade-in`}>
             <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
