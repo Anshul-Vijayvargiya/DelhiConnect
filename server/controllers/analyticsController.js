@@ -55,7 +55,8 @@ const getOverview = async (req, res) => {
     slaBreached,
     overdueCount,
     satisfactionRate,
-    avgResolutionHours: avgHours
+    avgResolutionHours: avgHours,
+    activeHotspots
   });
 };
 
