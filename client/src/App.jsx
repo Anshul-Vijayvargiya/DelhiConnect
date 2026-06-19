@@ -7,7 +7,7 @@ import LoginPage from './pages/LoginPage';
 import TrackComplaintPage from './pages/TrackComplaintPage';
 import MyComplaintsPage from './pages/citizen/MyComplaintsPage';
 import AllGrievancesPage from './pages/citizen/AllGrievancesPage';
-import About311Page from './pages/citizen/About311Page';
+import AboutDelhiConnectPage from './pages/citizen/AboutDelhiConnectPage';
 import OfficerDashboard from './pages/officer/OfficerDashboard';
 import AdminOverview from './pages/admin/AdminOverview';
 import AdminComplaints from './pages/admin/AdminComplaints';
@@ -42,9 +42,9 @@ function AppRoutes() {
           <AllGrievancesPage />
         </RequireAuth>
       } />
-      <Route path="/about-311" element={
+      <Route path="/about-delhiconnect" element={
         <RequireAuth roles={['citizen', 'admin', 'officer']}>
-          <About311Page />
+          <AboutDelhiConnectPage />
         </RequireAuth>
       } />
 

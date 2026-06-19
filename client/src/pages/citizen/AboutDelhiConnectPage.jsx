@@ -1,6 +1,6 @@
 import Layout from '../../components/Layout';
 
-export default function About311Page() {
+export default function AboutDelhiConnectPage() {
   return (
     <Layout title="About DelhiConnect">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">

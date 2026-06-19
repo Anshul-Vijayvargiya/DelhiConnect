@@ -21,8 +21,20 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  
+  // Camera specific state
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+  const [hasCamera, setHasCamera] = useState(true);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState(null);
+  const [capturedBlob, setCapturedBlob] = useState(null);
+
   const recognitionRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const objectUrlsRef = useRef([]); // Track created object URLs for cleanup
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -32,6 +44,15 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
     detectLocation();
   }, []);
 
+  // Check camera availability
+  useEffect(() => {
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const hasVideo = devices.some(device => device.kind === 'videoinput');
+        setHasCamera(hasVideo);
+      }).catch(() => setHasCamera(true));
+    }
+  }, []);
   const detectLocation = () => {
     setGpsState('detecting');
     if (!navigator.geolocation) {
@@ -66,8 +87,9 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reset input so same file can be re-selected after removal
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    // Reset inputs so same file can be re-selected after removal
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
 
     // Validate type
     if (!file.type.startsWith('image/')) {
@@ -94,6 +116,97 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const startCamera = async () => {
+    setCameraError('');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      // Fallback to native camera input if WebRTC is unsupported
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      } else {
+        setCameraError('Live camera not supported in this browser. Please use the gallery.');
+      }
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setCameraStream(stream);
+      setShowCameraModal(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(e => console.error("Video play error:", e));
+        }
+      }, 50);
+    } catch (err) {
+      console.error("Camera access denied:", err);
+      // Fallback to native camera input if permission denied or error
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      } else {
+        setCameraError('Camera access denied. Please allow camera permission, or choose from gallery.');
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCameraModal(false);
+    if (capturedPhotoUrl) {
+      URL.revokeObjectURL(capturedPhotoUrl);
+    }
+    setCapturedPhotoUrl(null);
+    setCapturedBlob(null);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setCapturedBlob(blob);
+          setCapturedPhotoUrl(url);
+        }
+      }, 'image/jpeg', 0.9);
+    }
+  };
+
+  const confirmPhoto = () => {
+    if (capturedBlob) {
+      const file = new File([capturedBlob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      if (file.size > 5 * 1024 * 1024) {
+        setPhotoError('Captured photo is too large.');
+      } else {
+        setPhotos(prev => {
+          if (prev.length >= 3) return prev;
+          return [...prev, file];
+        });
+        setPhotoError('');
+      }
+    }
+    stopCamera();
+  };
+
+  const retakePhoto = () => {
+    if (capturedPhotoUrl) {
+      URL.revokeObjectURL(capturedPhotoUrl);
+    }
+    setCapturedPhotoUrl(null);
+    setCapturedBlob(null);
+  };
+
+  const handleTakePhotoClick = () => {
+    // Always attempt to use the live camera modal first
+    startCamera();
   };
 
   // Voice input (Web Speech API)
@@ -334,13 +447,34 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
           <span className="ml-1.5 text-xs font-normal text-slate-400">(Optional · up to 3)</span>
         </label>
 
-        {/* Hidden file input — keep both attributes for native mobile camera/gallery prompt */}
+        {/* Camera Permission Error */}
+        {cameraError && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-xs text-red-700 font-medium mb-2">{cameraError}</p>
+            <button 
+              type="button" 
+              onClick={() => { setCameraError(''); galleryInputRef.current?.click(); }}
+              className="btn-secondary text-xs py-1.5 px-3 bg-white"
+            >
+              🖼️ Choose from Gallery instead
+            </button>
+          </div>
+        )}
+
+        {/* Hidden file inputs */}
         <input
           type="file"
-          ref={fileInputRef}
+          ref={cameraInputRef}
           style={{ display: 'none' }}
           accept="image/*"
           capture="environment"
+          onChange={handlePhotoChange}
+        />
+        <input
+          type="file"
+          ref={galleryInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
           onChange={handlePhotoChange}
         />
 
@@ -375,36 +509,64 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
             );
           })}
 
-          {/* Empty state / Add tile — only shown when fewer than 3 photos */}
+          {/* Empty state / Add tiles — only shown when fewer than 3 photos */}
           {photos.length < 3 && (
             photos.length === 0 ? (
-              /* Full-width empty state when no photos yet */
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full min-h-[130px] flex flex-col items-center justify-center gap-2
-                  border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
-                  hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
-                aria-label="Add photo"
-              >
-                <span className="text-3xl text-slate-400">📷</span>
-                <span className="text-sm font-medium text-slate-600">Tap to add photo</span>
-                <span className="text-xs text-slate-400">JPG or PNG, up to 5MB</span>
-              </button>
+              <div className="w-full flex gap-2">
+                {hasCamera && (
+                  <button
+                    type="button"
+                    onClick={handleTakePhotoClick}
+                    className="flex-1 flex flex-col items-center justify-center gap-2
+                      border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
+                      hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer min-h-[130px]"
+                    aria-label="Take photo"
+                  >
+                    <span className="text-3xl">📷</span>
+                    <span className="text-sm font-medium text-slate-600">Take Photo</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="flex-1 flex flex-col items-center justify-center gap-2
+                    border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
+                    hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer min-h-[130px]"
+                  aria-label="Choose from Gallery"
+                >
+                  <span className="text-3xl">🖼️</span>
+                  <span className="text-sm font-medium text-slate-600">Choose from Gallery</span>
+                </button>
+              </div>
             ) : (
-              /* Small "+" tile when 1 or 2 photos already added */
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={{ width: 90, height: 90 }}
-                className="flex-shrink-0 flex flex-col items-center justify-center gap-1
-                  border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
-                  hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
-                aria-label="Add another photo"
-              >
-                <span className="text-2xl text-slate-400 leading-none">+</span>
-                <span className="text-[10px] text-slate-500">Add photo</span>
-              </button>
+              <div className="flex gap-2 h-[90px]">
+                {hasCamera && (
+                  <button
+                    type="button"
+                    onClick={handleTakePhotoClick}
+                    style={{ width: 90 }}
+                    className="flex-shrink-0 flex flex-col items-center justify-center gap-1
+                      border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
+                      hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
+                    aria-label="Take another photo"
+                  >
+                    <span className="text-2xl text-slate-400 leading-none">📷</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Take Photo</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  style={{ width: 90 }}
+                  className="flex-shrink-0 flex flex-col items-center justify-center gap-1
+                    border-2 border-dashed border-slate-300 rounded-xl bg-slate-50
+                    hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
+                  aria-label="Choose from Gallery"
+                >
+                  <span className="text-2xl text-slate-400 leading-none">🖼️</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Gallery</span>
+                </button>
+              </div>
             )
           )}
         </div>
@@ -447,6 +609,67 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
         className="w-full btn-primary justify-center py-3 text-base disabled:opacity-60 font-bold transition-all">
         {submitting ? '⏳ Submitting...' : '📤 Submit Complaint'}
       </button>
+
+      {/* Camera Modal */}
+      {showCameraModal && (
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
+          <div className="p-4 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent absolute top-0 left-0 right-0 z-10">
+            <span className="text-white font-bold text-lg drop-shadow-md">
+              {capturedPhotoUrl ? 'Preview' : 'Take Photo'}
+            </span>
+            <button type="button" onClick={stopCamera} className="text-white text-3xl font-light hover:text-red-400 drop-shadow-md transition-colors">&times;</button>
+          </div>
+          
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-zinc-900">
+            {!capturedPhotoUrl ? (
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <img 
+                src={capturedPhotoUrl} 
+                alt="Preview" 
+                className="w-full h-full object-contain" 
+              />
+            )}
+          </div>
+          
+          <div className="p-6 bg-black flex justify-center items-center h-32 pb-safe">
+            {!capturedPhotoUrl ? (
+              <button 
+                type="button" 
+                onClick={capturePhoto} 
+                className="w-16 h-16 rounded-full border-4 border-white active:scale-90 transition-transform flex items-center justify-center bg-transparent"
+                aria-label="Capture photo"
+              >
+                <div className="w-14 h-14 rounded-full bg-white opacity-90" />
+              </button>
+            ) : (
+              <div className="flex gap-6 w-full max-w-sm px-4">
+                <button 
+                  type="button" 
+                  onClick={retakePhoto}
+                  className="flex-1 py-3 bg-zinc-800 text-white rounded-xl font-medium hover:bg-zinc-700 transition-colors"
+                >
+                  Retake
+                </button>
+                <button 
+                  type="button" 
+                  onClick={confirmPhoto}
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors"
+                >
+                  Use Photo
+                </button>
+              </div>
+            )}
+          </div>
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+        </div>
+      )}
     </form>
   );
 }

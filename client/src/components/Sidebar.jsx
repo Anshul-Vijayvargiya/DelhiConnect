@@ -8,20 +8,20 @@ const NAV_ADMIN = [
   { href: '/admin/heatmap', label: 'Heatmap', icon: '🗺️' },
   { href: '/admin/analytics', label: 'Analytics', icon: '📈' },
   { href: '/admin/reports', label: 'Reports', icon: '📄' },
-  { href: '/about-311', label: 'What is DelhiConnect?', icon: 'ℹ️' },
+  { href: '/about-delhiconnect', label: 'What is DelhiConnect?', icon: 'ℹ️' },
 ];
 
 const NAV_OFFICER = [
   { href: '/officer/dashboard', label: 'My Complaints', icon: '📋' },
   { href: '/all-grievances', label: 'All Grievances', icon: '👥' },
-  { href: '/about-311', label: 'What is DelhiConnect?', icon: 'ℹ️' },
+  { href: '/about-delhiconnect', label: 'What is DelhiConnect?', icon: 'ℹ️' },
 ];
 
 const NAV_CITIZEN = [
   { href: '/', label: 'Submit Complaint', icon: '📤' },
   { href: '/my-complaints', label: 'My Complaints', icon: '📋' },
   { href: '/all-grievances', label: 'All Grievances', icon: '👥' },
-  { href: '/about-311', label: 'What is DelhiConnect?', icon: 'ℹ️' },
+  { href: '/about-delhiconnect', label: 'What is DelhiConnect?', icon: 'ℹ️' },
 ];
 
 export default function Sidebar() {

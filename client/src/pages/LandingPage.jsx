@@ -230,7 +230,7 @@ export default function LandingPage() {
                 <span className="font-bold text-slate-800">1.2 Lakhs+</span>
               </div>
               <p className="text-[10px] text-amber-800/80 leading-relaxed mt-1">
-                Built on proven civic governance standards to achieve maximum citizen satisfaction.
+                Powered by DelhiConnect for transparent and responsive urban governance.
               </p>
             </div>
           </div>
