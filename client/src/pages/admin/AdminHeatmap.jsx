@@ -115,13 +115,14 @@ export default function AdminHeatmap() {
                 {/* Mock heatmap dots */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                   {points.slice(0, 50).map((p, i) => (
-                    <div key={i} className="absolute rounded-full opacity-60 blur-sm"
+                    <div key={i} className={`absolute rounded-full blur-sm ${p.isHotspot ? 'opacity-80 animate-pulse' : 'opacity-60'}`}
                       style={{
                         left: `${((p.lng - 76.8) / 0.7) * 100}%`,
                         top: `${((28.9 - p.lat) / 0.5) * 100}%`,
-                        width: `${8 + p.weight * 4}px`,
-                        height: `${8 + p.weight * 4}px`,
-                        background: { 4: '#ef4444', 3: '#f97316', 2: '#eab308', 1: '#22c55e' }[p.weight] || '#3b82f6'
+                        width: `${p.isHotspot ? 24 + p.weight * 3 : 8 + p.weight * 4}px`,
+                        height: `${p.isHotspot ? 24 + p.weight * 3 : 8 + p.weight * 4}px`,
+                        background: p.isHotspot ? '#dc2626' : ({ 4: '#ef4444', 3: '#f97316', 2: '#eab308', 1: '#22c55e' }[p.weight] || '#3b82f6'),
+                        boxShadow: p.isHotspot ? '0 0 20px 5px rgba(220, 38, 38, 0.5)' : 'none'
                       }} />
                   ))}
                 </div>

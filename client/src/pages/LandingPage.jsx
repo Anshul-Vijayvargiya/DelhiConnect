@@ -129,10 +129,24 @@ export default function LandingPage() {
       <div className="min-h-screen bg-gradient-to-br from-[#1A3A6B] to-[#0f2548] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl animate-fade-in">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Complaint Submitted!</h2>
-          <p className="text-slate-500 mb-4">Your grievance ID is:</p>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <div className="text-3xl font-mono font-bold text-blue-900">{grievanceId}</div>
+          
+          {submitted.isMerged ? (
+            <>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Good News!</h2>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                  <span className="text-blue-600 font-bold">{submitted.reporterCount - 1} other citizens</span> have already reported this issue near you. 
+                  Your report has been added to strengthen this case!
+                </p>
+              </div>
+            </>
+          ) : (
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Complaint Submitted!</h2>
+          )}
+
+          <p className="text-slate-500 mb-4">Your Tracking ID is:</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+            <div className="text-3xl font-mono font-bold text-slate-900">{grievanceId}</div>
             <div className="text-sm text-slate-500 mt-1">Save this for tracking</div>
           </div>
           <p className="text-sm text-slate-500 mb-4">

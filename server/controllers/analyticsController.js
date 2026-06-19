@@ -27,6 +27,12 @@ const getOverview = async (req, res) => {
     slaDeadline: { $lt: new Date() }
   });
 
+  const activeHotspots = await Complaint.countDocuments({
+    ...filter,
+    isHotspot: true,
+    status: { $nin: ['Resolved', 'Closed', 'Rejected'] }
+  });
+
   const totalFeedback = closed + reopened;
   const satisfactionRate = totalFeedback > 0 ? Math.round((closed / totalFeedback) * 100) : 0;
 
@@ -56,14 +62,22 @@ const getOverview = async (req, res) => {
 // GET /api/analytics/heatmap
 const getHeatmap = async (req, res) => {
   const points = await Complaint.find({ 'coordinates.lat': { $exists: true } })
-    .select('coordinates status priority category');
-  res.json(points.map(p => ({
-    lat: p.coordinates.lat,
-    lng: p.coordinates.lng,
-    weight: { Critical: 4, High: 3, Medium: 2, Low: 1 }[p.priority] || 1,
-    status: p.status,
-    category: p.category
-  })));
+    .select('coordinates status priority category isHotspot reporterCount');
+  res.json(points.map(p => {
+    let baseWeight = { Critical: 4, High: 3, Medium: 2, Low: 1 }[p.priority] || 1;
+    // Hotspots get exponentially more weight to stand out on the heatmap
+    let weight = p.isHotspot ? Math.max(6, baseWeight + p.reporterCount * 2) : baseWeight;
+    
+    return {
+      lat: p.coordinates.lat,
+      lng: p.coordinates.lng,
+      weight: weight,
+      status: p.status,
+      category: p.category,
+      isHotspot: p.isHotspot,
+      reporterCount: p.reporterCount
+    };
+  }));
 };
 
 // GET /api/analytics/department
