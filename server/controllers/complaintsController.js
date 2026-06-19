@@ -1,6 +1,22 @@
+const mongoose = require('mongoose');
 const Complaint = require('../models/Complaint');
 const { categorizeComplaint } = require('../services/geminiService');
 const { notifyStatus } = require('../services/twilioService');
+
+const getHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // metres
+  const phi1 = lat1 * Math.PI/180;
+  const phi2 = lat2 * Math.PI/180;
+  const deltaPhi = (lat2-lat1) * Math.PI/180;
+  const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c;
+};
 
 const getPriorityAndSla = (category) => {
   const cat = String(category || 'Other').toLowerCase();
@@ -91,6 +107,92 @@ const createComplaint = async (req, res) => {
   const actualCitizenId = citizenId || req.user?._id;
   const actualCreatedAt = timestamp ? new Date(timestamp) : new Date();
 
+  // --- HOTSPOT DUPLICATE DETECTION ---
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const openComplaints = await Complaint.find({
+    category: chosenCategory,
+    status: { $nin: ['Resolved', 'Closed', 'Rejected'] },
+    createdAt: { $gte: sevenDaysAgo }
+  });
+
+  let matchedComplaint = null;
+  for (let c of openComplaints) {
+    if (actualLat && actualLng && c.coordinates && c.coordinates.lat && c.coordinates.lng) {
+      const dist = getHaversineDistance(Number(actualLat), Number(actualLng), c.coordinates.lat, c.coordinates.lng);
+      if (dist <= 200) {
+        matchedComplaint = c;
+        break;
+      }
+    } else {
+      if (c.district === (district || 'Central Delhi') && c.ward === (ward || geoRouting.ward)) {
+        if (address && c.address && (address.toLowerCase().includes(c.address.toLowerCase()) || c.address.toLowerCase().includes(address.toLowerCase()))) {
+          matchedComplaint = c;
+          break;
+        } else if (!address && !c.address) {
+          matchedComplaint = c;
+          break;
+        }
+      }
+    }
+  }
+
+  if (matchedComplaint) {
+    matchedComplaint.isHotspot = true;
+    matchedComplaint.reporterCount = (matchedComplaint.reporterCount || 1) + 1;
+
+    const tempId = new mongoose.Types.ObjectId();
+    const newGrievanceId = 'GR-' + String(tempId).slice(-5).toUpperCase();
+    const photoUrl = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : undefined;
+
+    matchedComplaint.linkedReporters.push({
+      citizenId: actualCitizenId,
+      name: citizenName || req.user?.name,
+      phone: citizenPhone || req.user?.phone,
+      grievanceId: newGrievanceId,
+      submittedAt: actualCreatedAt,
+      photo: photoUrl
+    });
+
+    if (matchedComplaint.reporterCount >= 15 && matchedComplaint.priority !== 'Critical') {
+      matchedComplaint.priority = 'Critical';
+      const hours = 4;
+      matchedComplaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+      matchedComplaint.statusHistory.push({
+        status: matchedComplaint.status,
+        changedByName: 'System',
+        notes: `Priority automatically boosted to Critical due to ${matchedComplaint.reporterCount} reports (Hotspot).`
+      });
+    } else if (matchedComplaint.reporterCount >= 5 && !['High', 'Critical'].includes(matchedComplaint.priority)) {
+      matchedComplaint.priority = 'High';
+      const hours = 24;
+      matchedComplaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+      matchedComplaint.statusHistory.push({
+        status: matchedComplaint.status,
+        changedByName: 'System',
+        notes: `Priority automatically boosted to High due to ${matchedComplaint.reporterCount} reports (Hotspot).`
+      });
+    }
+
+    if (photoUrl) {
+      matchedComplaint.photos.push(photoUrl);
+    }
+
+    await matchedComplaint.save();
+
+    if (citizenPhone || req.user?.phone) {
+      await notifyStatus(citizenPhone || req.user?.phone, matchedComplaint._id, 'Submitted');
+    }
+
+    const matchedObj = matchedComplaint.toObject();
+    return res.status(201).json({
+      ...matchedObj,
+      isMerged: true,
+      mergedGrievanceId: newGrievanceId,
+      mergedMessage: `Good news — ${matchedComplaint.reporterCount - 1} other citizens have already reported this issue near you. Your report has been added to strengthen this case. Tracking ID: ${newGrievanceId}`
+    });
+  }
+  // --- END HOTSPOT MERGE ---
+
   const complaint = new Complaint({
     title: actualTitle,
     description,
@@ -157,7 +259,11 @@ const getComplaints = async (req, res) => {
   // Role-based filter
   // If user is a citizen, only show their own complaints unless public=true is passed
   if (req.user?.role === 'citizen' && public !== 'true') {
-    filter.citizenId = req.user._id;
+    filter.$or = [
+      { citizenId: req.user._id },
+      { 'linkedReporters.citizenId': req.user._id },
+      { 'linkedReporters.phone': req.user.phone }
+    ];
   }
   if (req.user?.role === 'officer') {
     filter.assignedOfficerId = req.user._id;

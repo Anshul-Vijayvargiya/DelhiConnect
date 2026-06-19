@@ -59,7 +59,18 @@ const complaintSchema = new mongoose.Schema({
     citizenName: String,
     commentText: String,
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  isHotspot: { type: Boolean, default: false },
+  reporterCount: { type: Number, default: 1 },
+  linkedReporters: [{
+    citizenId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    name: String,
+    phone: String,
+    grievanceId: String,
+    submittedAt: { type: Date, default: Date.now },
+    photo: String
+  }],
+  primaryGrievanceId: { type: String }
 }, { timestamps: true });
 
 // Auto-set SLA deadline based on priority & auto-generate title/grievanceId
