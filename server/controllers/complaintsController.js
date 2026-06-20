@@ -108,88 +108,44 @@ const createComplaint = async (req, res) => {
   const actualCreatedAt = timestamp ? new Date(timestamp) : new Date();
 
   // --- HOTSPOT DUPLICATE DETECTION ---
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const openComplaints = await Complaint.find({
-    category: chosenCategory,
-    status: { $nin: ['Resolved', 'Closed', 'Rejected'] },
-    createdAt: { $gte: sevenDaysAgo }
-  });
+  if (coordinates && coordinates.lat && coordinates.lng) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentComplaints = await Complaint.find({
+      category: chosenCategory,
+      createdAt: { $gte: sevenDaysAgo },
+      status: { $nin: ['Resolved', 'Closed', 'Rejected'] }
+    });
 
-  let matchedComplaint = null;
-  for (let c of openComplaints) {
-    if (actualLat && actualLng && c.coordinates && c.coordinates.lat && c.coordinates.lng) {
-      const dist = getHaversineDistance(Number(actualLat), Number(actualLng), c.coordinates.lat, c.coordinates.lng);
-      if (dist <= 200) {
-        matchedComplaint = c;
-        break;
-      }
-    } else {
-      if (c.district === (district || 'Central Delhi') && c.ward === (ward || geoRouting.ward)) {
-        if (address && c.address && (address.toLowerCase().includes(c.address.toLowerCase()) || c.address.toLowerCase().includes(address.toLowerCase()))) {
-          matchedComplaint = c;
-          break;
-        } else if (!address && !c.address) {
-          matchedComplaint = c;
-          break;
+    for (const existing of recentComplaints) {
+      if (existing.coordinates && existing.coordinates.lat && existing.coordinates.lng) {
+        const distance = getHaversineDistance(
+          coordinates.lat, coordinates.lng,
+          existing.coordinates.lat, existing.coordinates.lng
+        );
+        
+        if (distance <= 200) {
+          // Hotspot match found! Merge into existing complaint
+          existing.isHotspot = true;
+          existing.reporterCount += 1;
+          existing.linkedReporters.push({
+            citizenId: actualCitizenId,
+            name: citizenName || req.user?.name || 'Anonymous',
+            phone: citizenPhone || req.user?.phone,
+            submittedAt: actualCreatedAt,
+            photo: req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : null
+          });
+          
+          await existing.save();
+
+          // Notify citizen of the merged submission
+          if (citizenPhone || req.user?.phone) {
+            await notifyStatus(citizenPhone || req.user.phone, existing._id, 'Submitted (Hotspot Linked)');
+          }
+
+          return res.status(201).json(existing);
         }
       }
     }
-  }
-
-  if (matchedComplaint) {
-    matchedComplaint.isHotspot = true;
-    matchedComplaint.reporterCount = (matchedComplaint.reporterCount || 1) + 1;
-
-    const tempId = new mongoose.Types.ObjectId();
-    const newGrievanceId = 'GR-' + String(tempId).slice(-5).toUpperCase();
-    const photoUrl = req.files && req.files.length > 0 ? `/uploads/${req.files[0].filename}` : undefined;
-
-    matchedComplaint.linkedReporters.push({
-      citizenId: actualCitizenId,
-      name: citizenName || req.user?.name,
-      phone: citizenPhone || req.user?.phone,
-      grievanceId: newGrievanceId,
-      submittedAt: actualCreatedAt,
-      photo: photoUrl
-    });
-
-    if (matchedComplaint.reporterCount >= 15 && matchedComplaint.priority !== 'Critical') {
-      matchedComplaint.priority = 'Critical';
-      const hours = 4;
-      matchedComplaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
-      matchedComplaint.statusHistory.push({
-        status: matchedComplaint.status,
-        changedByName: 'System',
-        notes: `Priority automatically boosted to Critical due to ${matchedComplaint.reporterCount} reports (Hotspot).`
-      });
-    } else if (matchedComplaint.reporterCount >= 5 && !['High', 'Critical'].includes(matchedComplaint.priority)) {
-      matchedComplaint.priority = 'High';
-      const hours = 24;
-      matchedComplaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
-      matchedComplaint.statusHistory.push({
-        status: matchedComplaint.status,
-        changedByName: 'System',
-        notes: `Priority automatically boosted to High due to ${matchedComplaint.reporterCount} reports (Hotspot).`
-      });
-    }
-
-    if (photoUrl) {
-      matchedComplaint.photos.push(photoUrl);
-    }
-
-    await matchedComplaint.save();
-
-    if (citizenPhone || req.user?.phone) {
-      await notifyStatus(citizenPhone || req.user?.phone, matchedComplaint._id, 'Submitted');
-    }
-
-    const matchedObj = matchedComplaint.toObject();
-    return res.status(201).json({
-      ...matchedObj,
-      isMerged: true,
-      mergedGrievanceId: newGrievanceId,
-      mergedMessage: `Good news — ${matchedComplaint.reporterCount - 1} other citizens have already reported this issue near you. Your report has been added to strengthen this case. Tracking ID: ${newGrievanceId}`
-    });
   }
   // --- END HOTSPOT MERGE ---
 
@@ -300,131 +256,160 @@ const getComplaintById = async (req, res) => {
   res.json(complaint);
 };
 
+// GET /api/complaints/track/:grievanceId
+const getComplaintByGrievanceId = async (req, res) => {
+  const complaint = await Complaint.findOne({ grievanceId: req.params.grievanceId })
+    .populate('assignedOfficerId', 'name email department');
+
+  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+  res.json(complaint);
+};
+
 // PATCH /api/complaints/:id/status
 const updateStatus = async (req, res) => {
-  const { status, notes } = req.body;
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+  try {
+    const { status, notes } = req.body;
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-  if (status === 'Resolved') {
-    return res.status(400).json({ message: 'Resolution photo proof is required to resolve a complaint.' });
-  }
+    if (status === 'Resolved') {
+      return res.status(400).json({ message: 'Resolution photo proof is required to resolve a complaint.' });
+    }
 
-  complaint.status = status;
+    complaint.status = status;
 
-  complaint.statusHistory.push({
-    status,
-    changedBy: req.user?._id,
-    changedByName: req.user?.name || 'Officer',
-    notes
-  });
-
-  await complaint.save();
-
-  // Notify citizen
-  if (complaint.citizenPhone) {
-    await notifyStatus(complaint.citizenPhone, complaint._id, status, {
-      department: complaint.assignedDepartment
+    complaint.statusHistory.push({
+      status,
+      changedBy: req.user?._id,
+      changedByName: req.user?.name || 'Officer',
+      notes
     });
-  }
 
-  res.json(complaint);
+    await complaint.save();
+
+    // Notify citizen
+    if (complaint.citizenPhone) {
+      await notifyStatus(complaint.citizenPhone, complaint._id, status, {
+        department: complaint.assignedDepartment
+      });
+    }
+
+    res.json(complaint);
+  } catch (error) {
+    console.error('Error updating status:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
 };
 
 // PATCH /api/complaints/:id/assign
 const assignComplaint = async (req, res) => {
-  const { assignedDepartment, assignedOfficerId } = req.body;
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+  try {
+    const { assignedDepartment, assignedOfficerId } = req.body;
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-  complaint.assignedDepartment = assignedDepartment;
-  complaint.assignedOfficerId = assignedOfficerId;
-  complaint.status = 'Assigned';
-  complaint.statusHistory.push({
-    status: 'Assigned',
-    changedBy: req.user?._id,
-    changedByName: req.user?.name || 'Admin',
-    notes: `Assigned to ${assignedDepartment}`
-  });
+    complaint.assignedDepartment = assignedDepartment;
+    complaint.assignedOfficerId = assignedOfficerId;
+    complaint.status = 'Assigned';
+    complaint.statusHistory.push({
+      status: 'Assigned',
+      changedBy: req.user?._id,
+      changedByName: req.user?.name || 'Admin',
+      notes: `Assigned to ${assignedDepartment}`
+    });
 
-  await complaint.save();
+    await complaint.save();
 
-  if (complaint.citizenPhone) {
-    await notifyStatus(complaint.citizenPhone, complaint._id, 'Assigned', { department: assignedDepartment });
+    if (complaint.citizenPhone) {
+      await notifyStatus(complaint.citizenPhone, complaint._id, 'Assigned', { department: assignedDepartment });
+    }
+
+    res.json(complaint);
+  } catch (error) {
+    console.error('Error assigning complaint:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
-
-  res.json(complaint);
 };
 
 // POST /api/complaints/:id/resolve
 const resolveComplaint = async (req, res) => {
-  const { resolutionNotes } = req.body;
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+  try {
+    const { resolutionNotes } = req.body;
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ message: 'Resolution photo proof is required.' });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'Resolution photo proof is required.' });
+    }
+
+    complaint.status = 'Resolved';
+    complaint.resolvedAt = new Date();
+    complaint.resolutionNotes = resolutionNotes;
+    complaint.resolutionProof = `/uploads/${req.files[0].filename}`;
+
+    complaint.statusHistory.push({
+      status: 'Resolved',
+      changedBy: req.user?._id,
+      changedByName: req.user?.name || 'Officer',
+      notes: resolutionNotes || 'Complaint resolved'
+    });
+
+    await complaint.save();
+
+    if (complaint.citizenPhone) {
+      await notifyStatus(complaint.citizenPhone, complaint._id, 'Resolved');
+    }
+
+    res.json(complaint);
+  } catch (error) {
+    console.error('Error resolving complaint:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
-
-  complaint.status = 'Resolved';
-  complaint.resolvedAt = new Date();
-  complaint.resolutionNotes = resolutionNotes;
-  complaint.resolutionProof = `/uploads/${req.files[0].filename}`;
-
-  complaint.statusHistory.push({
-    status: 'Resolved',
-    changedBy: req.user?._id,
-    changedByName: req.user?.name || 'Officer',
-    notes: resolutionNotes || 'Complaint resolved'
-  });
-
-  await complaint.save();
-
-  if (complaint.citizenPhone) {
-    await notifyStatus(complaint.citizenPhone, complaint._id, 'Resolved');
-  }
-
-  res.json(complaint);
 };
 
 // POST /api/complaints/:id/feedback
 const submitFeedback = async (req, res) => {
-  const { satisfied } = req.body;
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+  try {
+    const { satisfied } = req.body;
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-  if (satisfied) {
-    complaint.status = 'Closed';
-    complaint.statusHistory.push({
-      status: 'Closed',
-      changedBy: req.user?._id,
-      changedByName: req.user?.name || 'Citizen',
-      notes: 'Citizen confirmed satisfaction. Complaint closed.'
-    });
-  } else {
-    // Escalate priority
-    const priorityOrder = ['Low', 'Medium', 'High', 'Critical'];
-    const currentIdx = priorityOrder.indexOf(complaint.priority);
-    const newPriority = currentIdx < priorityOrder.length - 1 ? priorityOrder[currentIdx + 1] : 'Critical';
-    
-    complaint.status = 'Reopened';
-    complaint.priority = newPriority;
+    if (satisfied) {
+      complaint.status = 'Closed';
+      complaint.statusHistory.push({
+        status: 'Closed',
+        changedBy: req.user?._id,
+        changedByName: req.user?.name || 'Citizen',
+        notes: 'Citizen confirmed satisfaction. Complaint closed.'
+      });
+    } else {
+      // Escalate priority
+      const priorityOrder = ['Low', 'Medium', 'High', 'Critical'];
+      const currentIdx = priorityOrder.indexOf(complaint.priority);
+      const newPriority = currentIdx < priorityOrder.length - 1 ? priorityOrder[currentIdx + 1] : 'Critical';
+      
+      complaint.status = 'Reopened';
+      complaint.priority = newPriority;
 
-    // Recalculate SLA based on new priority
-    const slaHours = { Critical: 4, High: 24, Medium: 72, Low: 168 };
-    const hours = slaHours[newPriority] || 72;
-    complaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+      // Recalculate SLA based on new priority
+      const slaHours = { Critical: 4, High: 24, Medium: 72, Low: 168 };
+      const hours = slaHours[newPriority] || 72;
+      complaint.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
 
-    complaint.statusHistory.push({
-      status: 'Reopened',
-      changedBy: req.user?._id,
-      changedByName: req.user?.name || 'Citizen',
-      notes: `Citizen not satisfied. Reopened & escalated priority to ${newPriority}.`
-    });
+      complaint.statusHistory.push({
+        status: 'Reopened',
+        changedBy: req.user?._id,
+        changedByName: req.user?.name || 'Citizen',
+        notes: `Citizen not satisfied. Reopened & escalated priority to ${newPriority}.`
+      });
+    }
+
+    await complaint.save();
+    res.json(complaint);
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
-
-  await complaint.save();
-  res.json(complaint);
 };
 
 // POST /api/complaints/:id/vote
@@ -486,6 +471,7 @@ module.exports = {
   createComplaint,
   getComplaints,
   getComplaintById,
+  getComplaintByGrievanceId,
   updateStatus,
   assignComplaint,
   resolveComplaint,

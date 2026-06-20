@@ -122,8 +122,8 @@ export default function LandingPage() {
   if (submitted) {
     const grievanceId = submitted.grievanceId || `GR-${String(submitted._id).slice(-5).toUpperCase()}`;
     const shareText = `I just registered a grievance: "${submitted.title}" via DelhiConnect CM Portal. Track ID: ${grievanceId}`;
-    const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/track/' + submitted._id)}&quote=${encodeURIComponent(shareText)}`;
-    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.origin + '/track/' + submitted._id)}`;
+    const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/track/' + grievanceId)}&quote=${encodeURIComponent(shareText)}`;
+    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.origin + '/track/' + grievanceId)}`;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A3A6B] to-[#0f2548] flex items-center justify-center p-4">
@@ -171,7 +171,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => navigate(`/track/${submitted._id}`)}
+            <button onClick={() => navigate(`/track/${grievanceId}`)}
               className="flex-1 bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition">
               Track Status
             </button>

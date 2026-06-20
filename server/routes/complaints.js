@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { protect, requireRole } = require('../middleware/auth');
+const { protect, requireRole, optionalAuth } = require('../middleware/auth');
 const {
-  createComplaint, getComplaints, getComplaintById,
+  createComplaint, getComplaints, getComplaintById, getComplaintByGrievanceId,
   updateStatus, assignComplaint, resolveComplaint, submitFeedback,
   toggleVote, addComment
 } = require('../controllers/complaintsController');
@@ -15,8 +15,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.post('/', upload.any(), createComplaint);
+router.post('/', optionalAuth, upload.any(), createComplaint);
 router.get('/', protect, getComplaints);
+router.get('/track/:grievanceId', getComplaintByGrievanceId);
 router.get('/:id', protect, getComplaintById);
 router.patch('/:id/status', protect, requireRole('officer', 'admin'), updateStatus);
 router.patch('/:id/assign', protect, requireRole('admin'), assignComplaint);

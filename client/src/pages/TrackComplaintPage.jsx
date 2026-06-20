@@ -70,7 +70,8 @@ export default function TrackComplaintPage() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const fetchComplaint = () => {
-    complaintsAPI.get(id)
+    const apiCall = id.startsWith('GR-') ? complaintsAPI.track(id) : complaintsAPI.get(id);
+    apiCall
       .then(r => setComplaint(r.data))
       .catch(e => setError(e.response?.data?.message || 'Complaint not found'))
       .finally(() => setLoading(false));
@@ -82,7 +83,7 @@ export default function TrackComplaintPage() {
 
   const handleFeedback = (satisfied) => {
     setSubmittingFeedback(true);
-    complaintsAPI.feedback(id, { satisfied })
+    complaintsAPI.feedback(complaint._id, { satisfied })
       .then(r => {
         setComplaint(r.data);
         if (satisfied) {

@@ -200,7 +200,7 @@ export default function AllGrievancesPage() {
   // Handle Web Share or Copy Link
   const handleShare = async (c) => {
     const grievanceId = c.grievanceId || `GR-${String(c._id).slice(-5).toUpperCase()}`;
-    const shareUrl = `${window.location.origin}/track/${c._id}`;
+    const shareUrl = `${window.location.origin}/track/${grievanceId}`;
     const shareText = `Grievance ${grievanceId}: ${c.title} — Help resolve this neighborhood issue on DelhiConnect.`;
 
     if (navigator.share) {
@@ -261,25 +261,65 @@ export default function AllGrievancesPage() {
     );
   };
 
-  // Fallback category photo mapping
-  const getCategoryPhoto = (category) => {
+  // Fallback category photo mapping with variety
+  const getCategoryPhoto = (category, id) => {
     const cat = String(category || '').toLowerCase();
+    let photos = [];
+
     if (cat.includes('garbage') || cat.includes('waste') || cat.includes('sanitation')) {
-      return 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop';
+      photos = [
+        '/images/grievances/garbage-1.png',
+        'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1528323273322-d81458248d40?w=600&auto=format&fit=crop'
+      ];
+    } else if (cat.includes('pothole') || cat.includes('road')) {
+      photos = [
+        '/images/grievances/pothole-1.png',
+        'https://images.unsplash.com/photo-1515162305285-0293e4767cc2?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1584824388179-8809283e16c9?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1517409249080-60fcf422c5cd?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1502052445170-c752ba17ec06?w=600&auto=format&fit=crop'
+      ];
+    } else if (cat.includes('light') || cat.includes('electricity')) {
+      photos = [
+        '/images/grievances/electricity-1.png',
+        'https://images.unsplash.com/photo-1494253109108-2e30c049369b?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1517505193952-0941913c7bb6?w=600&auto=format&fit=crop'
+      ];
+    } else if (cat.includes('water')) {
+      photos = [
+        '/images/grievances/water-1.png',
+        'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1519961129469-80897ea4f9c0?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1494875323577-c2579b9bc8ee?w=600&auto=format&fit=crop'
+      ];
+    } else if (cat.includes('police') || cat.includes('safety') || cat.includes('dangerous')) {
+      photos = [
+        '/images/grievances/safety-1.png',
+        'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1520697960309-fa992167dcf1?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1583324113626-70df0f4deaab?w=600&auto=format&fit=crop'
+      ];
+    } else if (cat.includes('dog') || cat.includes('animal') || cat.includes('stray')) {
+      photos = [
+        '/images/grievances/dogs-1.png',
+        '/images/grievances/dogs-2.png',
+        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600&auto=format&fit=crop'
+      ];
+    } else {
+      photos = [
+        'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1517732306149-e8f831ae218f?w=600&auto=format&fit=crop'
+      ];
     }
-    if (cat.includes('pothole') || cat.includes('road')) {
-      return 'https://images.unsplash.com/photo-1515162305285-0293e4767cc2?w=600&auto=format&fit=crop';
-    }
-    if (cat.includes('light') || cat.includes('electricity')) {
-      return 'https://images.unsplash.com/photo-1509395062183-67c5ad6faff9?w=600&auto=format&fit=crop';
-    }
-    if (cat.includes('water')) {
-      return 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop';
-    }
-    if (cat.includes('police') || cat.includes('safety') || cat.includes('dangerous')) {
-      return 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&auto=format&fit=crop';
-    }
-    return 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop';
+
+    // Determine an index based on the grievance ID so it stays the same for a specific grievance
+    const index = id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0;
+    return photos[index];
   };
 
   const userId = user?._id || user?.id;
@@ -375,7 +415,7 @@ export default function AllGrievancesPage() {
               const hasVoted = userId && c.upvotes?.includes(userId);
               const commentCount = c.comments?.length || 0;
               const isCommentsOpen = expandedComments[c._id];
-              const photoUrl = c.photos && c.photos.length > 0 ? c.photos[0] : getCategoryPhoto(c.category);
+              const photoUrl = c.photos && c.photos.length > 0 ? c.photos[0] : getCategoryPhoto(c.category, c._id);
 
               return (
                 <div key={c._id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in hover:shadow-md transition duration-200">
@@ -398,7 +438,10 @@ export default function AllGrievancesPage() {
                   <div className="p-5 space-y-4">
                     {/* Citizen details */}
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-sm shadow-inner border border-blue-200">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-inner"
+                        style={{ backgroundColor: `hsl(${String(c.citizenName || 'C').length * 25 % 360}, 70%, 50%)` }}
+                      >
                         {String(c.citizenName || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -409,11 +452,48 @@ export default function AllGrievancesPage() {
 
                     {/* Complaint Title */}
                     <div>
-                      <h3 className="font-bold text-slate-900 text-base leading-snug">
-                        {c.assignedDepartment ? `${c.assignedDepartment}: ` : ''}{c.title}
-                      </h3>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-slate-900 text-base leading-snug">
+                          {c.assignedDepartment ? `${c.assignedDepartment}: ` : ''}{c.title}
+                        </h3>
+                        {c.isHotspot && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm flex-shrink-0">
+                            🔥 Hotspot
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{c.description}</p>
                     </div>
+
+                    {/* Linked Reporters Display if Hotspot */}
+                    {c.isHotspot && c.linkedReporters?.length > 0 && (
+                      <div className="border border-orange-200 bg-orange-50/50 rounded-xl p-3 mt-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-orange-800 flex items-center gap-1">
+                            🔥 Neighborhood Hotspot
+                          </h4>
+                          <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                            {c.reporterCount} Reports
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {c.linkedReporters.slice(0, 5).map((reporter, idx) => (
+                            <div key={idx} className="w-8 h-8 rounded-full bg-white border border-orange-200 overflow-hidden shadow-sm flex-shrink-0 flex items-center justify-center text-orange-600 font-bold text-[10px]" title={reporter.name}>
+                              {reporter.photo ? (
+                                <img src={reporter.photo} alt="Issue" className="w-full h-full object-cover" />
+                              ) : (
+                                String(reporter.name || 'C').charAt(0).toUpperCase()
+                              )}
+                            </div>
+                          ))}
+                          {c.linkedReporters.length > 5 && (
+                            <div className="w-8 h-8 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-700 font-bold text-[10px] shadow-sm flex-shrink-0">
+                              +{c.linkedReporters.length - 5}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Details Row: Location + Date */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3 text-slate-500">

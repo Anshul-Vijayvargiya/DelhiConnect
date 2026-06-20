@@ -124,15 +124,28 @@ async function seed() {
       const resolvedAt = status === 'Resolved' ? new Date(createdAt.getTime() + randomInt(1, slaHours * 2) * 3600000) : undefined;
       const dept = DEPARTMENTS.find(d => d.categories.includes(sample.category));
       const officer = officers.find(o => o.department === dept?.name);
+      const block = randomElement(['A', 'B', 'C', 'D', 'E']);
+      const streetNum = randomInt(1, 200);
+      const wardNum = randomInt(1, 30);
+
+      const isHotspot = Math.random() > 0.8; // 20% chance to be a hotspot
+      const reporterCount = isHotspot ? randomInt(3, 15) : 1;
+      const linkedReporters = isHotspot ? Array(reporterCount - 1).fill(0).map((_, idx) => ({
+        citizenId: citizen._id,
+        name: `Neighbor ${idx + 1}`,
+        phone: '+919876543210',
+        addedAt: randomDate(30)
+      })) : [];
 
       complaints.push({
         ...sample,
-        description: `${sample.title}. This is causing major inconvenience to residents of ${district}. Immediate attention requested.`,
+        title: `${sample.title} at Block ${block}, ${district}`,
+        description: `${sample.title}. This is causing major inconvenience to residents of Block ${block}, ${district} near street ${streetNum}. Immediate attention requested.`,
         status,
         priority,
         district,
-        ward: `Ward ${randomInt(1, 30)}`,
-        address: `${randomInt(1, 200)}, Block ${randomElement(['A', 'B', 'C', 'D', 'E'])}, ${district}`,
+        ward: `Ward ${wardNum}`,
+        address: `${streetNum}, Block ${block}, ${district}`,
         coordinates: {
           lat: baseCoords.lat + (Math.random() - 0.5) * 0.05,
           lng: baseCoords.lng + (Math.random() - 0.5) * 0.05
@@ -149,6 +162,9 @@ async function seed() {
         aiCategory: sample.category,
         aiPriority: priority,
         aiReason: `Auto-classified based on complaint content`,
+        isHotspot,
+        reporterCount,
+        linkedReporters,
         createdAt,
         updatedAt: createdAt,
         statusHistory: [

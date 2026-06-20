@@ -43,7 +43,7 @@ export default function MyComplaintsPage() {
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-xs text-slate-400">{c.assignedDepartment || 'Not assigned'}</span>
-              <a href={`/track/${c._id}`} className="text-sm text-blue-700 hover:underline font-medium">
+              <a href={`/track/${c.grievanceId || `GR-${String(c._id).slice(-5).toUpperCase()}`}`} className="text-sm text-blue-700 hover:underline font-medium">
                 Track →
               </a>
             </div>

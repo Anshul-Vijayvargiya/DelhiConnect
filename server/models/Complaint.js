@@ -74,7 +74,7 @@ const complaintSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-set SLA deadline based on priority & auto-generate title/grievanceId
-complaintSchema.pre('save', function (next) {
+complaintSchema.pre('save', function () {
   if (this.isModified('priority') || this.isNew) {
     const slaHours = { Critical: 4, High: 24, Medium: 72, Low: 168 };
     const hours = slaHours[this.priority] || 72;
@@ -89,7 +89,6 @@ complaintSchema.pre('save', function (next) {
       this.grievanceId = 'GR-' + String(this._id).slice(-5).toUpperCase();
     }
   }
-  next();
 });
 
 // Check SLA breach

@@ -36,6 +36,7 @@ export const complaintsAPI = {
   create: (data) => api.post('/complaints', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   list: (params) => api.get('/complaints', { params }),
   get: (id) => api.get(`/complaints/${id}`),
+  track: (grievanceId) => api.get(`/complaints/track/${grievanceId}`),
   updateStatus: (id, data) => api.patch(`/complaints/${id}/status`, data),
   assign: (id, data) => api.patch(`/complaints/${id}/assign`, data),
   resolve: (id, data) => api.post(`/complaints/${id}/resolve`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),

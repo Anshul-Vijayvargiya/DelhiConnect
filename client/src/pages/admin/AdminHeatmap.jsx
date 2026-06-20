@@ -3,80 +3,113 @@ import Layout from '../../components/Layout';
 import { analyticsAPI } from '../../services/api';
 import { CATEGORIES } from '../../utils/constants';
 
-const DELHI_CENTER = { lat: 28.6139, lng: 77.2090 };
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import 'leaflet.heat';
+
+const DELHI_CENTER = [28.6139, 77.2090];
 
 export default function AdminHeatmap() {
-  const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
   const mapInstance = useRef(null);
-  const heatmapRef = useRef(null);
+  const heatLayerInstance = useRef(null);
+  
   const [points, setPoints] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [mapLoaded, setMapLoaded] = useState(false);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
     analyticsAPI.heatmap().then(r => {
       setPoints(r.data);
-      const byDist = {};
-      r.data.forEach(p => {
-        // Count points
-      });
       setStats({ total: r.data.length });
     });
   }, []);
 
+  // Initialize Map only once
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || apiKey.includes('your_') || mapInstance.current) return;
+    if (!mapContainerRef.current || mapInstance.current) return;
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=visualization&callback=initDelhiMap`;
-    script.async = true;
-    script.defer = true;
+    // Create map
+    const map = L.map(mapContainerRef.current).setView(DELHI_CENTER, 11);
+    
+    // Add CARTO Positron (Light) tiles for a clean, clear look
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
 
-    window.initDelhiMap = () => {
-      if (!mapRef.current) return;
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: DELHI_CENTER, zoom: 11,
-        mapTypeId: 'roadmap',
-        styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
-      });
-      mapInstance.current = map;
-      setMapLoaded(true);
+    mapInstance.current = map;
+
+    return () => {
+      map.remove();
+      mapInstance.current = null;
     };
-
-    document.head.appendChild(script);
-    return () => { delete window.initDelhiMap; };
   }, []);
 
+  // Update Heatmap Layer when points or filter change
   useEffect(() => {
-    if (!mapLoaded || !window.google || !points.length) return;
+    if (!mapInstance.current || !points.length) return;
 
     const filtered = categoryFilter ? points.filter(p => p.category === categoryFilter) : points;
 
-    if (heatmapRef.current) heatmapRef.current.setMap(null);
-    const heatmapData = filtered.map(p => ({
-      location: new window.google.maps.LatLng(p.lat, p.lng),
-      weight: p.weight
-    }));
+    // Heatmap data format for leaflet.heat: [lat, lng, intensity]
+    const heatData = filtered.map(p => [
+      p.lat, 
+      p.lng, 
+      p.weight // intensity
+    ]);
 
-    heatmapRef.current = new window.google.maps.visualization.HeatmapLayer({
-      data: heatmapData,
-      map: mapInstance.current,
-      radius: 30,
-      opacity: 0.8,
-      gradient: [
-        'rgba(0,255,255,0)', 'rgba(0,255,255,1)', 'rgba(0,191,255,1)',
-        'rgba(0,127,255,1)', 'rgba(0,63,255,1)', 'rgba(0,0,255,1)',
-        'rgba(0,0,223,1)', 'rgba(0,0,191,1)', 'rgba(0,0,159,1)',
-        'rgba(0,0,127,1)', 'rgba(63,0,91,1)', 'rgba(127,0,63,1)',
-        'rgba(191,0,31,1)', 'rgba(255,0,0,1)'
-      ]
+    // Remove existing layers if they exist
+    if (heatLayerInstance.current) {
+      mapInstance.current.removeLayer(heatLayerInstance.current);
+    }
+    // We also need to remove existing marker layer group if we added one
+    if (mapInstance.current.markerGroup) {
+      mapInstance.current.removeLayer(mapInstance.current.markerGroup);
+    }
+
+    // Create a new layer group for the interactive tooltips
+    const markerGroup = L.layerGroup();
+
+    filtered.forEach(p => {
+      // Create an invisible circle marker just for the hover interaction
+      L.circleMarker([p.lat, p.lng], {
+        radius: 12,
+        fillOpacity: 0,
+        opacity: 0,
+        interactive: true
+      })
+      .bindTooltip(`
+        <div class="bg-white text-slate-800 rounded shadow-sm">
+          <div class="font-bold text-sm mb-1">${p.category}</div>
+          <div class="text-xs">Status: <span class="font-semibold">${p.status}</span></div>
+          ${p.isHotspot ? `<div class="text-xs text-red-600 font-bold mt-1">🔥 Active Hotspot (${p.reporterCount} reports)</div>` : ''}
+        </div>
+      `, { direction: 'top', offset: [0, -10] })
+      .addTo(markerGroup);
     });
-  }, [mapLoaded, points, categoryFilter]);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const hasKey = apiKey && !apiKey.includes('your_');
+    // Save the marker group to the map instance so we can remove it later
+    mapInstance.current.markerGroup = markerGroup;
+    markerGroup.addTo(mapInstance.current);
+
+    // Add new heatmap layer
+    heatLayerInstance.current = L.heatLayer(heatData, {
+      radius: 22, // Slightly larger for visibility
+      blur: 15,   // Crisper edges
+      maxZoom: 14,
+      max: 10,    // Adjusted so hotspots show up brighter
+      gradient: {
+        0.2: '#3b82f6', // Low (blue instead of green for better contrast on light map)
+        0.4: '#eab308', // Medium (yellow)
+        0.6: '#f97316', // High (orange)
+        0.8: '#ef4444', // Critical (red)
+        1.0: '#991b1b'  // Hotspot (deep dark red)
+      }
+    }).addTo(mapInstance.current);
+
+  }, [points, categoryFilter]);
 
   return (
     <Layout title="Complaint Heatmap — Delhi NCT">
@@ -98,54 +131,33 @@ export default function AdminHeatmap() {
         </div>
 
         {/* Map */}
-        <div className="card overflow-hidden">
-          {!hasKey ? (
-            // Mock Heatmap when no API key
-            <div className="relative bg-slate-800 h-[500px] flex items-center justify-center">
-              <div className="text-center text-white max-w-md px-4">
-                <div className="text-5xl mb-4">🗺️</div>
-                <h3 className="text-xl font-bold mb-2">Interactive Heatmap</h3>
-                <p className="text-slate-400 text-sm mb-4">
-                  Configure <code className="bg-slate-700 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY</code> to enable the live Google Maps heatmap showing {points.length} complaint locations across Delhi.
-                </p>
-                <div className="bg-slate-700 rounded-lg p-4 text-left text-xs text-slate-300">
-                  <p className="font-mono">VITE_GOOGLE_MAPS_API_KEY=your_key_here</p>
-                  <p className="mt-1 text-slate-400">in client/.env</p>
-                </div>
-                {/* Mock heatmap dots */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  {points.slice(0, 50).map((p, i) => (
-                    <div key={i} className={`absolute rounded-full blur-sm ${p.isHotspot ? 'opacity-80 animate-pulse' : 'opacity-60'}`}
-                      style={{
-                        left: `${((p.lng - 76.8) / 0.7) * 100}%`,
-                        top: `${((28.9 - p.lat) / 0.5) * 100}%`,
-                        width: `${p.isHotspot ? 24 + p.weight * 3 : 8 + p.weight * 4}px`,
-                        height: `${p.isHotspot ? 24 + p.weight * 3 : 8 + p.weight * 4}px`,
-                        background: p.isHotspot ? '#dc2626' : ({ 4: '#ef4444', 3: '#f97316', 2: '#eab308', 1: '#22c55e' }[p.weight] || '#3b82f6'),
-                        boxShadow: p.isHotspot ? '0 0 20px 5px rgba(220, 38, 38, 0.5)' : 'none'
-                      }} />
-                  ))}
-                </div>
+        <div className="card overflow-hidden shadow-xl relative p-0">
+          <div ref={mapContainerRef} className="h-[600px] w-full z-0" style={{ zIndex: 0 }} />
+          
+          {/* Custom Overlay for Map loading state */}
+          {!points.length && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
+                <p className="text-slate-600 font-medium">Loading map data...</p>
               </div>
             </div>
-          ) : (
-            <div ref={mapRef} className="h-[500px] w-full" />
           )}
         </div>
 
         {/* Legend */}
         <div className="card p-4">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Legend</h3>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Heatmap Intensity (Weight)</h3>
+          <div className="flex flex-wrap gap-6 text-sm">
             {[
-              { label: 'Critical', color: 'bg-red-500' },
-              { label: 'High', color: 'bg-orange-500' },
-              { label: 'Medium', color: 'bg-yellow-500' },
-              { label: 'Low', color: 'bg-green-500' },
+              { label: 'Critical / Hotspot', color: 'bg-red-600' },
+              { label: 'High Priority', color: 'bg-orange-500' },
+              { label: 'Medium Priority', color: 'bg-yellow-500' },
+              { label: 'Low Priority', color: 'bg-blue-500' },
             ].map(item => (
               <div key={item.label} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                <span className="text-slate-600">{item.label} Priority</span>
+                <div className={`w-4 h-4 rounded-full shadow-md ${item.color}`} />
+                <span className="text-slate-600 font-medium">{item.label}</span>
               </div>
             ))}
           </div>
