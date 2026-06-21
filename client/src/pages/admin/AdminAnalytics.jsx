@@ -12,7 +12,6 @@ export default function AdminAnalytics() {
   const [period, setPeriod] = useState('daily');
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([
       analyticsAPI.trends({ period, days: period === 'daily' ? 30 : 90 }),
       analyticsAPI.categories(),
@@ -35,7 +34,7 @@ export default function AdminAnalytics() {
             <h2 className="font-semibold text-slate-700">📈 Complaint Volume Trend</h2>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
               {['daily', 'weekly', 'monthly'].map(p => (
-                <button key={p} onClick={() => setPeriod(p)}
+                <button key={p} onClick={() => { setPeriod(p); setLoading(true); }}
                   className={`px-3 py-1 text-xs rounded font-medium capitalize transition-all
                     ${period === p ? 'bg-white shadow text-blue-900' : 'text-slate-500 hover:text-slate-700'}`}>
                   {p}

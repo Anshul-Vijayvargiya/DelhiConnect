@@ -53,14 +53,11 @@ export default function LandingPage() {
   };
 
   // Find Nearby mock helper based on actual GPS
-  const handleFindNearMe = (typeId, query) => {
+  const handleFindNearMe = (typeId) => {
     setSelectedNearMeType(typeId);
     setSearchingNearMe(true);
     setTimeout(() => {
       // Mocked nearby facilities based on real-ish Delhi coordinates
-      const lat = gpsLocation?.lat || 28.6139;
-      const lng = gpsLocation?.lng || 77.2090;
-
       const mockFacilities = {
         hospital: [
           { name: 'Dr. Ram Manohar Lohia Hospital', dist: '1.2 km', address: 'Baba Kharak Singh Marg, Connaught Place' },
@@ -376,7 +373,7 @@ export default function LandingPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-2 mb-6">
                 {NEARBY_FACILITY_TYPES.map(type => (
-                  <button key={type.id} onClick={() => handleFindNearMe(type.id, type.query)}
+                  <button key={type.id} onClick={() => handleFindNearMe(type.id)}
                     className={`p-3 rounded-xl border text-center transition flex flex-col items-center gap-1.5
                       ${selectedNearMeType === type.id ? 'bg-blue-900 border-blue-900 text-white shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'}`}>
                     <span className="text-2xl">{type.icon}</span>

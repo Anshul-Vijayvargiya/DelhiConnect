@@ -8,15 +8,11 @@ const getOverview = async (req, res) => {
   if (endDate) dateFilter.$lte = new Date(endDate);
   const filter = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
 
-  const [total, pending, assigned, inProgress, resolved, closed, reopened, rejected, slaBreached] = await Promise.all([
+  const [total, pending, inProgress, resolved, slaBreached] = await Promise.all([
     Complaint.countDocuments(filter),
-    Complaint.countDocuments({ ...filter, status: { $in: ['Pending', 'Submitted'] } }),
-    Complaint.countDocuments({ ...filter, status: 'Assigned' }),
+    Complaint.countDocuments({ ...filter, status: { $in: ['Pending', 'Submitted', 'Assigned', 'Reopened'] } }),
     Complaint.countDocuments({ ...filter, status: 'In Progress' }),
-    Complaint.countDocuments({ ...filter, status: 'Resolved' }),
-    Complaint.countDocuments({ ...filter, status: 'Closed' }),
-    Complaint.countDocuments({ ...filter, status: 'Reopened' }),
-    Complaint.countDocuments({ ...filter, status: 'Rejected' }),
+    Complaint.countDocuments({ ...filter, status: { $in: ['Resolved', 'Closed', 'Rejected'] } }),
     Complaint.countDocuments({ ...filter, slaBreached: true }),
   ]);
 
@@ -33,8 +29,10 @@ const getOverview = async (req, res) => {
     status: { $nin: ['Resolved', 'Closed', 'Rejected'] }
   });
 
-  const totalFeedback = closed + reopened;
-  const satisfactionRate = totalFeedback > 0 ? Math.round((closed / totalFeedback) * 100) : 0;
+  const closedCount = await Complaint.countDocuments({ ...filter, status: 'Closed' });
+  const reopenedCount = await Complaint.countDocuments({ ...filter, status: 'Reopened' });
+  const totalFeedback = closedCount + reopenedCount;
+  const satisfactionRate = totalFeedback > 0 ? Math.round((closedCount / totalFeedback) * 100) : 0;
 
   // Average resolution time in hours (including Resolved and Closed)
   const resolvedComplaints = await Complaint.find({ ...filter, status: { $in: ['Resolved', 'Closed'] }, resolvedAt: { $exists: true } })
@@ -46,12 +44,8 @@ const getOverview = async (req, res) => {
   res.json({
     total,
     pending,
-    assigned,
     inProgress,
     resolved,
-    closed,
-    reopened,
-    rejected,
     slaBreached,
     overdueCount,
     satisfactionRate,

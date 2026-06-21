@@ -49,7 +49,6 @@ export default function AllGrievancesPage() {
   const DEFAULT_DELHI_COORDS = { lat: 28.6139, lng: 77.2090 };
 
   const fetchGrievances = async (tab = activeTab, location = gpsLocation) => {
-    setLoading(true);
     try {
       const params = { limit: 50 };
 
@@ -115,15 +114,16 @@ export default function AllGrievancesPage() {
 
   useEffect(() => {
     if (activeTab === 'nearby') {
-      if (!gpsLocation) {
-        getGPSCoords();
-      } else {
+      if (gpsLocation) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchGrievances('nearby', gpsLocation);
       }
     } else {
+       
       fetchGrievances(activeTab, null);
     }
-  }, [activeTab]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, gpsLocation]);
 
   // Vote Up handler (Optimistic UI)
   const handleVote = async (complaintId) => {
@@ -217,7 +217,7 @@ export default function AllGrievancesPage() {
       try {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
         toast.success('Grievance link copied to clipboard!');
-      } catch (err) {
+      } catch {
         toast.error('Failed to copy link');
       }
     }
@@ -264,62 +264,64 @@ export default function AllGrievancesPage() {
   // Fallback category photo mapping with variety
   const getCategoryPhoto = (category, id) => {
     const cat = String(category || '').toLowerCase();
-    let photos = [];
 
     if (cat.includes('garbage') || cat.includes('waste') || cat.includes('sanitation')) {
-      photos = [
+      const photos = [
         '/images/grievances/garbage-1.png',
         'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1528323273322-d81458248d40?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     } else if (cat.includes('pothole') || cat.includes('road')) {
-      photos = [
+      const photos = [
         '/images/grievances/pothole-1.png',
         'https://images.unsplash.com/photo-1515162305285-0293e4767cc2?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1584824388179-8809283e16c9?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1517409249080-60fcf422c5cd?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1502052445170-c752ba17ec06?w=600&auto=format&fit=crop'
       ];
-    } else if (cat.includes('light') || cat.includes('electricity')) {
-      photos = [
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+    } else if (cat.includes('light') || cat.includes('electricity') || cat.includes('power')) {
+      const photos = [
         '/images/grievances/electricity-1.png',
         'https://images.unsplash.com/photo-1494253109108-2e30c049369b?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1517505193952-0941913c7bb6?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     } else if (cat.includes('water')) {
-      photos = [
+      const photos = [
         '/images/grievances/water-1.png',
         'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1519961129469-80897ea4f9c0?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1494875323577-c2579b9bc8ee?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     } else if (cat.includes('police') || cat.includes('safety') || cat.includes('dangerous')) {
-      photos = [
+      const photos = [
         '/images/grievances/safety-1.png',
         'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1520697960309-fa992167dcf1?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1583324113626-70df0f4deaab?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     } else if (cat.includes('dog') || cat.includes('animal') || cat.includes('stray')) {
-      photos = [
+      const photos = [
         '/images/grievances/dogs-1.png',
         '/images/grievances/dogs-2.png',
         'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     } else {
-      photos = [
+      const photos = [
         'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1517732306149-e8f831ae218f?w=600&auto=format&fit=crop'
       ];
+      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
     }
-
-    // Determine an index based on the grievance ID so it stays the same for a specific grievance
-    const index = id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0;
-    return photos[index];
   };
 
   const userId = user?._id || user?.id;
@@ -337,7 +339,7 @@ export default function AllGrievancesPage() {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); setLoading(true); }}
               className={`flex-1 py-3 text-center rounded-lg font-bold text-sm transition-all duration-150 cursor-pointer
                 ${activeTab === tab.id
                   ? 'bg-blue-900 text-white shadow-md'

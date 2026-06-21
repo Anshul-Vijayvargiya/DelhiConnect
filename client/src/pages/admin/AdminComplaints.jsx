@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import ComplaintTable from '../../components/ComplaintTable';
 import { complaintsAPI } from '../../services/api';
 import { DELHI_DISTRICTS, CATEGORIES, STATUS_OPTIONS, PRIORITY_OPTIONS, DEPARTMENTS } from '../../utils/constants';
 import { StatusBadge, PriorityBadge, SLABadge, AIBadge } from '../../components/Badges';
@@ -17,10 +16,12 @@ export default function AdminComplaints() {
   const [statusForm, setStatusForm] = useState({ status: '', notes: '' });
   const [saving, setSaving] = useState(false);
 
-  const setFilter = (key, val) => setFilters(f => ({ ...f, [key]: val, page: 1 }));
+  const setFilter = (key, val) => {
+    setLoading(true);
+    setFilters(f => ({ ...f, [key]: val, page: 1 }));
+  };
 
   const fetch = useCallback(() => {
-    setLoading(true);
     complaintsAPI.list({ ...filters, limit: 20 })
       .then(r => setData(r.data))
       .catch(() => toast.error('Failed to load'))
@@ -43,6 +44,7 @@ export default function AdminComplaints() {
       await complaintsAPI.assign(detail._id, assignForm);
       toast.success('Complaint assigned!');
       setDetail(null);
+      setLoading(true);
       fetch();
     } catch { toast.error('Failed to assign'); }
     finally { setSaving(false); }
@@ -54,6 +56,7 @@ export default function AdminComplaints() {
       await complaintsAPI.updateStatus(detail._id, statusForm);
       toast.success('Status updated!');
       setDetail(null);
+      setLoading(true);
       fetch();
     } catch { toast.error('Failed to update'); }
     finally { setSaving(false); }
@@ -98,7 +101,7 @@ export default function AdminComplaints() {
               <input className="input" placeholder="Search complaints..." value={filters.search}
                 onChange={e => setFilter('search', e.target.value)} />
             </div>
-            <button onClick={() => setFilters({ status: '', district: '', category: '', priority: '', search: '', page: 1 })}
+            <button onClick={() => { setLoading(true); setFilters({ status: '', district: '', category: '', priority: '', search: '', page: 1 }); }}
               className="btn-secondary text-sm">Reset</button>
           </div>
         </div>
@@ -162,10 +165,10 @@ export default function AdminComplaints() {
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
               <span className="text-sm text-slate-500">Showing {data.data.length} of {data.total}</span>
               <div className="flex gap-1">
-                <button disabled={filters.page <= 1} onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}
+                <button disabled={filters.page <= 1} onClick={() => { setLoading(true); setFilters(f => ({ ...f, page: f.page - 1 })); }}
                   className="px-3 py-1 text-sm rounded border border-slate-200 disabled:opacity-40 hover:bg-white">← Prev</button>
                 <span className="px-3 py-1 text-sm text-slate-600">Page {filters.page} of {data.pages}</span>
-                <button disabled={filters.page >= data.pages} onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}
+                <button disabled={filters.page >= data.pages} onClick={() => { setLoading(true); setFilters(f => ({ ...f, page: f.page + 1 })); }}
                   className="px-3 py-1 text-sm rounded border border-slate-200 disabled:opacity-40 hover:bg-white">Next →</button>
               </div>
             </div>

@@ -16,13 +16,13 @@ export default function AdminHeatmap() {
   
   const [points, setPoints] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
-    analyticsAPI.heatmap().then(r => {
-      setPoints(r.data);
-      setStats({ total: r.data.length });
-    });
+    analyticsAPI.heatmap()
+      .then(r => setPoints(r.data))
+      .finally(() => setLoading(false));
   }, []);
 
   // Initialize Map only once
@@ -135,7 +135,7 @@ export default function AdminHeatmap() {
           <div ref={mapContainerRef} className="h-[600px] w-full z-0" style={{ zIndex: 0 }} />
           
           {/* Custom Overlay for Map loading state */}
-          {!points.length && (
+          {loading && (
             <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10">
               <div className="flex flex-col items-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>

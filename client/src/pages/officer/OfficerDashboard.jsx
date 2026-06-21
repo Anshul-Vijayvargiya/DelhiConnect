@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { complaintsAPI } from '../../services/api';
 import Layout from '../../components/Layout';
-import ComplaintTable from '../../components/ComplaintTable';
 import { useAuth } from '../../context/AuthContext';
 import { StatusBadge, PriorityBadge } from '../../components/Badges';
-import { formatDateTime } from '../../utils/helpers';
 import StatusTimeline from '../../components/StatusTimeline';
 import toast from 'react-hot-toast';
 
@@ -18,7 +16,6 @@ export default function OfficerDashboard() {
   const [updating, setUpdating] = useState(false);
 
   const fetch = () => {
-    setLoading(true);
     complaintsAPI.list({ limit: 100 })
       .then(r => setComplaints(r.data.data || []))
       .catch(() => toast.error('Failed to load'))
@@ -43,8 +40,8 @@ export default function OfficerDashboard() {
         fd.append('resolutionNotes', statusForm.notes);
         await complaintsAPI.resolve(selected._id, fd);
         toast.success('Complaint marked as Resolved with photo proof!');
-        setSelected(null);
         setResolutionPhoto(null);
+        setLoading(true);
         fetch();
       } catch (err) {
         toast.error(err.response?.data?.message || 'Failed to resolve');
@@ -59,6 +56,7 @@ export default function OfficerDashboard() {
       await complaintsAPI.updateStatus(selected._id, statusForm);
       toast.success('Status updated!');
       setSelected(null);
+      setLoading(true);
       fetch();
     } catch {
       toast.error('Failed to update');

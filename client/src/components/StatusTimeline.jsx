@@ -1,7 +1,7 @@
 import { formatDateTime } from '../utils/helpers';
 import { StatusBadge } from './Badges';
 
-const STEPS = ['Pending', 'Assigned', 'In Progress', 'Resolved'];
+
 
 const stepIcons = {
   Pending: '📥',

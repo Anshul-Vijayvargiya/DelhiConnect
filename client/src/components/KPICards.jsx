@@ -9,7 +9,7 @@ export default function KPICards({ data, loading }) {
       border: 'border-blue-200'
     },
     {
-      label: 'Pending/Sub',
+      label: 'Pending & Assigned',
       value: data?.pending ?? '—',
       icon: '⏳',
       color: 'text-yellow-700',
@@ -25,7 +25,7 @@ export default function KPICards({ data, loading }) {
       border: 'border-orange-200'
     },
     {
-      label: 'Resolved/Closed',
+      label: 'Resolved/Closed/Rejected',
       value: data?.resolved ?? '—',
       icon: '✅',
       color: 'text-green-700',
@@ -33,7 +33,7 @@ export default function KPICards({ data, loading }) {
       border: 'border-green-200'
     },
     {
-      label: 'Overdue (SLA Breached)',
+      label: '⚠ Overdue (Flagged)',
       value: data?.slaBreached ?? '—',
       icon: '⚠️',
       color: 'text-red-700',
@@ -50,7 +50,7 @@ export default function KPICards({ data, loading }) {
     },
     {
       label: 'Citizen Satisfaction',
-      value: data?.citizenSatisfactionRate !== undefined ? `${data.citizenSatisfactionRate.toFixed(1)}%` : '—',
+      value: data?.satisfactionRate !== undefined ? `${data.satisfactionRate.toFixed(1)}%` : '—',
       icon: '😊',
       color: 'text-teal-700',
       bg: 'bg-teal-50',

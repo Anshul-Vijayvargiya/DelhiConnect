@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { complaintsAPI } from '../../services/api';
 import { StatusBadge, PriorityBadge } from '../../components/Badges';
-import { formatDate, timeAgo } from '../../utils/helpers';
-import { useAuth } from '../../context/AuthContext';
+import { timeAgo } from '../../utils/helpers';
 import Layout from '../../components/Layout';
 
 export default function MyComplaintsPage() {
-  const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
 

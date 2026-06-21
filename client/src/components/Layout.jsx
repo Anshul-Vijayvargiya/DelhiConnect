@@ -8,7 +8,7 @@ export default function Layout({ children, title }) {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {user && <Sidebar />}
-      <main className={`flex-1 overflow-y-auto flex flex-col ${!user ? 'min-h-screen' : ''}`}>
+      <main className={`flex-1 overflow-y-auto flex flex-col min-w-0 ${!user ? 'min-h-screen' : ''}`}>
         {title && (
           <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
             <h1 className="text-xl font-bold text-slate-800">{title}</h1>

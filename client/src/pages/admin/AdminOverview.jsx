@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import KPICards from '../../components/KPICards';
-import { TrendChart, CategoryChart, DeptPieChart } from '../../components/Charts';
+import { TrendChart, CategoryChart } from '../../components/Charts';
 import { analyticsAPI } from '../../services/api';
 
 export default function AdminOverview() {

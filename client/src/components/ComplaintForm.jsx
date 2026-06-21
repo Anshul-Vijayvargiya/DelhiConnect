@@ -35,7 +35,6 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
   const galleryInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const objectUrlsRef = useRef([]); // Track created object URLs for cleanup
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -53,7 +52,8 @@ export default function ComplaintForm({ onSubmit, loading: submitting }) {
       }).catch(() => setHasCamera(true));
     }
   }, []);
-  const detectLocation = () => {
+
+  function detectLocation() {
     setGpsState('detecting');
     if (!navigator.geolocation) {
       setGpsState('failed');

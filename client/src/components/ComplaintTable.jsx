@@ -1,20 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { StatusBadge, PriorityBadge, SLABadge } from './Badges';
-import { formatDate, timeAgo } from '../utils/helpers';
-import { DELHI_DISTRICTS, CATEGORIES, STATUS_OPTIONS, PRIORITY_OPTIONS, DEPARTMENTS } from '../utils/constants';
+import { timeAgo } from '../utils/helpers';
 
 export default function ComplaintTable({
   complaints = [],
   loading,
   onAssign,
-  onStatusChange,
   showActions = false,
   total,
   page,
   pages,
   onPageChange
 }) {
-  const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
 
   const toggleSelect = (id) => setSelectedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);

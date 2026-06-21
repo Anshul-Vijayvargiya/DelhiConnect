@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { complaintsAPI } from '../services/api';
 import StatusTimeline from '../components/StatusTimeline';
 import { StatusBadge, PriorityBadge, SLABadge, AIBadge } from '../components/Badges';
@@ -64,20 +64,26 @@ const Stepper = ({ currentStatus }) => {
 
 export default function TrackComplaintPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
-
-  const fetchComplaint = () => {
-    const apiCall = id.startsWith('GR-') ? complaintsAPI.track(id) : complaintsAPI.get(id);
-    apiCall
-      .then(r => setComplaint(r.data))
-      .catch(e => setError(e.response?.data?.message || 'Complaint not found'))
-      .finally(() => setLoading(false));
-  };
+  const [searchId, setSearchId] = useState('');
 
   useEffect(() => {
+    if (!id || id === 'search') {
+      setLoading(false);
+      return;
+    }
+    const fetchComplaint = () => {
+      setLoading(true);
+      const apiCall = id.startsWith('GR-') ? complaintsAPI.track(id) : complaintsAPI.get(id);
+      apiCall
+        .then(r => setComplaint(r.data))
+        .catch(e => setError(e.response?.data?.message || 'Complaint not found'))
+        .finally(() => setLoading(false));
+    };
     fetchComplaint();
   }, [id]);
 
@@ -96,9 +102,38 @@ export default function TrackComplaintPage() {
       .finally(() => setSubmittingFeedback(false));
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchId.trim()) navigate(`/track/${searchId.trim()}`);
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="animate-spin text-4xl">⏳</div>
+    </div>
+  );
+
+  if (!id || id === 'search') return (
+    <div className="min-h-screen bg-gradient-to-br from-[#1A3A6B] to-[#0f2548] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md text-center w-full shadow-2xl animate-fade-in">
+        <div className="text-4xl mb-4">🔍</div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Track Grievance</h2>
+        <p className="text-slate-500 text-sm mb-6">Enter your Grievance ID to check the real-time status of your complaint.</p>
+        <form onSubmit={handleSearch} className="space-y-4">
+          <input
+            type="text"
+            placeholder="e.g. GR-A1B2C"
+            className="input text-center font-mono text-lg"
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value.toUpperCase())}
+            required
+          />
+          <button type="submit" className="w-full btn-primary bg-blue-900 hover:bg-blue-800 py-3">
+            Search Status →
+          </button>
+        </form>
+        <Link to="/" className="mt-4 inline-block text-sm text-blue-600 hover:underline">Submit a New Complaint instead</Link>
+      </div>
     </div>
   );
 

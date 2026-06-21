@@ -7,6 +7,11 @@ const COLORS = ['#1A3A6B', '#FF6B35', '#16A34A', '#D97706', '#7C3AED', '#0EA5E9'
 
 export function TrendChart({ data = [], loading }) {
   if (loading) return <div className="h-64 bg-slate-50 animate-pulse rounded-lg" />;
+  if (!data || data.length === 0) return (
+    <div className="h-[260px] flex items-center justify-center bg-slate-50 border border-dashed border-slate-200 rounded-lg">
+      <span className="text-slate-400 text-sm font-medium">No complaint data available for this period.</span>
+    </div>
+  );
 
   const formatted = data.map(d => ({
     date: `${d._id?.day ?? ''}/${d._id?.month ?? d._id?.week ?? ''}`,

@@ -5,10 +5,10 @@ import { downloadBlob } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 export default function AdminReports() {
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState(() => ({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
-  });
+  }));
   const [generating, setGenerating] = useState(false);
 
   const generate = async () => {
@@ -18,7 +18,7 @@ export default function AdminReports() {
       const res = await reportsAPI.generate(dateRange);
       downloadBlob(res.data, `delhi-cm-report-${dateRange.startDate}-to-${dateRange.endDate}.pdf`);
       toast.success('Report downloaded!', { id: tid });
-    } catch (err) {
+    } catch {
       toast.error('Failed to generate report', { id: tid });
     } finally {
       setGenerating(false);
@@ -33,9 +33,11 @@ export default function AdminReports() {
   ];
 
   const applyPreset = (days) => {
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now();
     setDateRange({
-      startDate: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0]
+      startDate: new Date(now - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      endDate: new Date(now).toISOString().split('T')[0]
     });
   };
 
