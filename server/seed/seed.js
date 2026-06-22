@@ -128,13 +128,36 @@ async function seed() {
       const streetNum = randomInt(1, 200);
       const wardNum = randomInt(1, 30);
 
+      let categoryPhoto = '/images/grievances/pothole-1.png';
+      const cat = String(sample.category || '').toLowerCase();
+      if (cat.includes('garbage') || cat.includes('waste') || cat.includes('sanitation')) {
+        categoryPhoto = '/images/grievances/garbage-1.png';
+      } else if (cat.includes('pothole') || cat.includes('road')) {
+        categoryPhoto = '/images/grievances/pothole-1.png';
+      } else if (cat.includes('light') || cat.includes('electricity') || cat.includes('power')) {
+        categoryPhoto = '/images/grievances/electricity-1.png';
+      } else if (cat.includes('water')) {
+        categoryPhoto = '/images/grievances/water-1.png';
+      } else if (cat.includes('police') || cat.includes('safety') || cat.includes('dangerous')) {
+        categoryPhoto = '/images/grievances/safety-1.png';
+      } else if (cat.includes('dog') || cat.includes('animal') || cat.includes('stray')) {
+        categoryPhoto = '/images/grievances/dogs-1.png';
+      } else if (cat.includes('park')) {
+        categoryPhoto = '/images/grievances/park-1.png';
+      } else if (cat.includes('health') || cat.includes('hospital')) {
+        categoryPhoto = '/images/grievances/health-1.png';
+      } else if (cat.includes('education') || cat.includes('school')) {
+        categoryPhoto = '/images/grievances/education-1.png';
+      }
+
       const isHotspot = Math.random() > 0.8; // 20% chance to be a hotspot
       const reporterCount = isHotspot ? randomInt(3, 15) : 1;
       const linkedReporters = isHotspot ? Array(reporterCount - 1).fill(0).map((_, idx) => ({
         citizenId: citizen._id,
         name: `Neighbor ${idx + 1}`,
         phone: '+919876543210',
-        addedAt: randomDate(30)
+        addedAt: randomDate(30),
+        photo: categoryPhoto
       })) : [];
 
       complaints.push({
@@ -165,6 +188,7 @@ async function seed() {
         isHotspot,
         reporterCount,
         linkedReporters,
+        photos: [categoryPhoto],
         createdAt,
         updatedAt: createdAt,
         statusHistory: [

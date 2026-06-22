@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 const NAV_ADMIN = [
   { href: '/admin/overview', labelKey: 'Overview', icon: '📊' },
@@ -68,12 +69,12 @@ export default function Sidebar() {
         {nav.map((item) => {
           const isActive = path === item.href || path.startsWith(item.href + '/');
           return (
-            <a key={item.href} href={item.href}
+            <Link key={item.href} to={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                 ${isActive ? 'bg-white/20 text-white' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}>
               <span className="text-lg leading-none">{item.icon}</span>
               {!collapsed && <span>{t(item.labelKey)}</span>}
-            </a>
+            </Link>
           );
         })}
       </nav>
@@ -92,11 +93,11 @@ export default function Sidebar() {
             {!collapsed && t('Logout')}
           </button>
         ) : (
-          <a href="/login"
+          <Link to="/login"
             className="flex items-center gap-2 px-3 py-2 text-sm text-blue-200 hover:text-white hover:bg-white/10 rounded-lg">
             <span>🔐</span>
             {!collapsed && t('Login')}
-          </a>
+          </Link>
         )}
       </div>
     </aside>

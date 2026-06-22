@@ -4,6 +4,7 @@ import { complaintsAPI } from '../../services/api';
 import { formatDateTime, timeAgo } from '../../utils/helpers';
 import Layout from '../../components/Layout';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 // Skeleton Loading Card
 function SkeletonCard() {
@@ -31,6 +32,7 @@ function SkeletonCard() {
 
 export default function AllGrievancesPage() {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('city'); // 'nearby', 'city', 'yours'
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -266,62 +268,92 @@ export default function AllGrievancesPage() {
     const cat = String(category || '').toLowerCase();
 
     if (cat.includes('garbage') || cat.includes('waste') || cat.includes('sanitation')) {
-      const photos = [
-        '/images/grievances/garbage-1.png',
-        'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1528323273322-d81458248d40?w=600&auto=format&fit=crop'
-      ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return '/images/grievances/garbage-1.png';
     } else if (cat.includes('pothole') || cat.includes('road')) {
-      const photos = [
-        '/images/grievances/pothole-1.png',
-        'https://images.unsplash.com/photo-1515162305285-0293e4767cc2?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1584824388179-8809283e16c9?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1517409249080-60fcf422c5cd?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1502052445170-c752ba17ec06?w=600&auto=format&fit=crop'
-      ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return '/images/grievances/pothole-1.png';
     } else if (cat.includes('light') || cat.includes('electricity') || cat.includes('power')) {
-      const photos = [
-        '/images/grievances/electricity-1.png',
-        'https://images.unsplash.com/photo-1494253109108-2e30c049369b?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1517505193952-0941913c7bb6?w=600&auto=format&fit=crop'
-      ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return '/images/grievances/electricity-1.png';
     } else if (cat.includes('water')) {
-      const photos = [
-        '/images/grievances/water-1.png',
-        'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1519961129469-80897ea4f9c0?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1494875323577-c2579b9bc8ee?w=600&auto=format&fit=crop'
-      ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return '/images/grievances/water-1.png';
     } else if (cat.includes('police') || cat.includes('safety') || cat.includes('dangerous')) {
-      const photos = [
-        '/images/grievances/safety-1.png',
-        'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1520697960309-fa992167dcf1?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1583324113626-70df0f4deaab?w=600&auto=format&fit=crop'
-      ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return '/images/grievances/safety-1.png';
     } else if (cat.includes('dog') || cat.includes('animal') || cat.includes('stray')) {
-      const photos = [
-        '/images/grievances/dogs-1.png',
-        '/images/grievances/dogs-2.png',
-        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600&auto=format&fit=crop'
-      ];
+      const photos = ['/images/grievances/dogs-1.png', '/images/grievances/dogs-2.png'];
       return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+    } else if (cat.includes('park')) {
+      return '/images/grievances/park-1.png';
+    } else if (cat.includes('health') || cat.includes('hospital')) {
+      return '/images/grievances/health-1.png';
+    } else if (cat.includes('education') || cat.includes('school')) {
+      return '/images/grievances/education-1.png';
     } else {
-      const photos = [
-        'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1517732306149-e8f831ae218f?w=600&auto=format&fit=crop'
+      const fallbacks = [
+        '/images/grievances/pothole-1.png',
+        '/images/grievances/garbage-1.png',
+        '/images/grievances/water-1.png',
+        '/images/grievances/electricity-1.png',
+        '/images/grievances/park-1.png'
       ];
-      return photos[id ? String(id).charCodeAt(String(id).length - 1) % photos.length : 0];
+      return fallbacks[id ? String(id).charCodeAt(String(id).length - 1) % fallbacks.length : 0];
     }
+  };
+
+  const translateComplaintText = (text) => {
+    if (!text) return '';
+    let translated = text;
+    const translations = {
+      'Large pothole on main road causing accidents': 'मुख्य सड़क पर बड़ा गड्ढा दुर्घटनाओं का कारण',
+      'No water supply for 3 days in our area': 'हमारे क्षेत्र में 3 दिनों से पानी की आपूर्ति नहीं',
+      'Streetlight not working since last month': 'पिछले महीने से स्ट्रीटलाइट काम नहीं कर रही है',
+      'Garbage not collected for a week': 'एक सप्ताह से कचरा नहीं उठाया गया',
+      'Illegal construction blocking emergency exit': 'आपातकालीन निकास को अवरुद्ध करने वाला अवैध निर्माण',
+      'Government hospital running out of medicines': 'सरकारी अस्पताल में दवाइयों की कमी',
+      'Park damaged and not maintained': 'पार्क क्षतिग्रस्त और रखरखाव न होना',
+      'School building in dangerous condition': 'स्कूल भवन खतरनाक स्थिति में',
+      'Sewer overflow on residential street': 'आवासीय सड़क पर सीवर का पानी बहना',
+      'Broken water pipeline wasting water': 'टूटी पानी की पाइपलाइन से पानी बर्बाद',
+      'Road divider damaged causing accidents': 'सड़क विभाजक क्षतिग्रस्त दुर्घटनाओं का कारण',
+      'Power cuts for 8 hours daily': 'रोजाना 8 घंटे बिजली कटौती',
+      'Stray dogs attacking residents': 'आवारा कुत्ते निवासियों पर हमला कर रहे हैं',
+      'Open manhole dangerous for pedestrians': 'पैदल यात्रियों के लिए खुला मैनहोल खतरनाक',
+      'Tree fallen on road blocking traffic': 'सड़क पर पेड़ गिरने से यातायात बाधित'
+    };
+
+    for (const [key, value] of Object.entries(translations)) {
+      if (translated.includes(key)) {
+        if (i18n.language === 'hi') {
+          translated = translated.replace(key, value);
+          translated = translated.replace(/\bat Block\b/gi, 'ब्लॉक');
+          translated = translated.replace(/\bnear street\b/gi, 'गली के पास');
+        }
+        break;
+      }
+    }
+
+    if (i18n.language === 'hi') {
+      translated = translated.replace(/\bThis is causing major inconvenience to residents of\b/gi, 'इससे यहाँ के निवासियों को भारी असुविधा हो रही है:');
+      translated = translated.replace(/\bImmediate attention requested.\b/gi, 'तत्काल ध्यान देने का अनुरोध है।');
+    }
+
+    return translated;
+  };
+
+  const translateLocation = (address) => {
+    if (!address) return '';
+    let result = address;
+    if (i18n.language === 'hi') {
+      const districts = [
+        'Central Delhi', 'East Delhi', 'New Delhi', 'North Delhi',
+        'North East Delhi', 'North West Delhi', 'Shahdara', 'South Delhi',
+        'South East Delhi', 'South West Delhi', 'West Delhi'
+      ];
+      districts.forEach(d => {
+        result = result.replace(d, t(d));
+      });
+      result = result.replace(/\bBlock\b/gi, 'ब्लॉक');
+      result = result.replace(/\bWard\b/gi, 'वार्ड');
+    }
+    return result;
   };
 
   const userId = user?._id || user?.id;
@@ -333,9 +365,9 @@ export default function AllGrievancesPage() {
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-200 bg-white p-1 rounded-xl shadow-sm border">
           {[
-            { id: 'nearby', label: '📍 Nearby (2km)', desc: 'Near you' },
-            { id: 'city', label: '🏙️ City Feed', desc: 'All Delhi' },
-            { id: 'yours', label: '👤 Yours', desc: 'Your filings' },
+            { id: 'nearby', icon: '📍', label: 'Nearby (2km)' },
+            { id: 'city', icon: '🏙️', label: 'City Feed' },
+            { id: 'yours', icon: '👤', label: 'Yours' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -345,7 +377,7 @@ export default function AllGrievancesPage() {
                   ? 'bg-blue-900 text-white shadow-md'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
             >
-              <div className="text-sm">{tab.label}</div>
+              <div className="text-sm">{tab.icon} {t(tab.label)}</div>
             </button>
           ))}
         </div>
@@ -356,29 +388,29 @@ export default function AllGrievancesPage() {
             <div className="flex items-center gap-3">
               <span className="text-2xl">📡</span>
               <div>
-                <h4 className="font-bold text-blue-950">GPS Location Coordinates</h4>
+                <h4 className="font-bold text-blue-950">{t('GPS Location Coordinates')}</h4>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {locating 
-                    ? 'Requesting location access...' 
+                    ? t('Requesting location access...') 
                     : gpsLocation 
                       ? `Lat: ${gpsLocation.lat.toFixed(4)}, Lng: ${gpsLocation.lng.toFixed(4)}`
-                      : gpsError || 'GPS location helps find grievances in your neighborhood.'}
+                      : t(gpsError) || t('GPS location helps find grievances in your neighborhood.')}
                 </p>
               </div>
             </div>
             {!locating && !gpsLocation && (
               <div className="flex gap-2">
                 <button onClick={() => getGPSCoords(false)} className="btn-primary text-xs whitespace-nowrap">
-                  Enable GPS
+                  {t('Enable GPS')}
                 </button>
                 <button onClick={() => getGPSCoords(true)} className="btn-secondary text-xs whitespace-nowrap">
-                  Use Connaught Place
+                  {t('Use Connaught Place')}
                 </button>
               </div>
             )}
             {gpsLocation && (
               <button onClick={() => getGPSCoords(false)} className="btn-secondary text-xs">
-                🔄 Refresh Location
+                🔄 {t('Refresh Location')}
               </button>
             )}
           </div>
@@ -394,13 +426,13 @@ export default function AllGrievancesPage() {
           /* Empty State */
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
             <div className="text-5xl mb-4">📭</div>
-            <h3 className="font-bold text-slate-700 text-lg">No grievances found</h3>
+            <h3 className="font-bold text-slate-700 text-lg">{t('No grievances found')}</h3>
             <p className="text-slate-400 text-sm mt-1 max-w-sm mx-auto">
               {activeTab === 'nearby' 
-                ? 'No civic issues registered within 2km of your coordinates.' 
+                ? t('No civic issues registered within 2km of your coordinates.') 
                 : activeTab === 'yours' 
-                  ? "You have not registered any civic complaints yet." 
-                  : 'No complaints registered across Delhi yet.'}
+                  ? t("You have not registered any civic complaints yet.") 
+                  : t('No complaints registered across Delhi yet.')}
             </p>
             {activeTab === 'yours' && (
               <a href="/" className="mt-5 inline-block btn-primary">
@@ -447,7 +479,7 @@ export default function AllGrievancesPage() {
                         {String(c.citizenName || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-800">{c.citizenName || 'Citizen'}</div>
+                        <div className="text-xs font-bold text-slate-800">{c.citizenName || t('Citizen')}</div>
                         <div className="text-[10px] text-slate-400 font-semibold">{grievanceId}</div>
                       </div>
                     </div>
@@ -456,15 +488,15 @@ export default function AllGrievancesPage() {
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-bold text-slate-900 text-base leading-snug">
-                          {c.assignedDepartment ? `${c.assignedDepartment}: ` : ''}{c.title}
+                          {c.assignedDepartment ? `${t(c.assignedDepartment)}: ` : ''}{translateComplaintText(c.title)}
                         </h3>
                         {c.isHotspot && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm flex-shrink-0">
-                            🔥 Hotspot
+                            🔥 {t('Hotspot')}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{c.description}</p>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{translateComplaintText(c.description)}</p>
                     </div>
 
                     {/* Linked Reporters Display if Hotspot */}
@@ -472,10 +504,10 @@ export default function AllGrievancesPage() {
                       <div className="border border-orange-200 bg-orange-50/50 rounded-xl p-3 mt-3">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-bold text-orange-800 flex items-center gap-1">
-                            🔥 Neighborhood Hotspot
+                            🔥 {t('Neighborhood Hotspot')}
                           </h4>
                           <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
-                            {c.reporterCount} Reports
+                            {c.reporterCount} {t('Reports')}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -501,7 +533,7 @@ export default function AllGrievancesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3 text-slate-500">
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="text-base leading-none">📍</span>
-                        <span className="truncate">{c.address || c.district || 'Delhi'}</span>
+                        <span className="truncate">{translateLocation(c.address || c.district || 'Delhi')}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-base leading-none">📅</span>
@@ -512,10 +544,10 @@ export default function AllGrievancesPage() {
                     {/* Engagement Counts */}
                     <div className="flex gap-4 text-xs font-bold text-slate-500 border-t border-slate-100 pt-3">
                       <span className="flex items-center gap-1">
-                        👍 {upvoteCount} {upvoteCount === 1 ? 'Upvote' : 'Upvotes'}
+                        👍 {upvoteCount} {upvoteCount === 1 ? t('Vote Up') : t('Vote Up') + 's'}
                       </span>
                       <span className="flex items-center gap-1">
-                        💬 {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
+                        💬 {commentCount} {commentCount === 1 ? t('Comment') : t('Comment') + 's'}
                       </span>
                     </div>
 
@@ -528,7 +560,7 @@ export default function AllGrievancesPage() {
                             ? 'bg-blue-900 border-blue-900 text-white shadow-sm hover:bg-blue-800' 
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'}`}
                       >
-                        <span>👍</span> Vote Up
+                        <span>👍</span> {t('Vote Up')}
                       </button>
                       <button 
                         onClick={() => toggleComments(c._id)}
@@ -537,20 +569,20 @@ export default function AllGrievancesPage() {
                             ? 'bg-slate-100 border-slate-300 text-slate-800' 
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'}`}
                       >
-                        <span>💬</span> Comment
+                        <span>💬</span> {t('Comment')}
                       </button>
                       <button 
                         onClick={() => handleShare(c)}
                         className="py-2 px-3 text-xs font-bold rounded-lg border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <span>🔗</span> Share
+                        <span>🔗</span> {t('Share')}
                       </button>
                     </div>
 
                     {/* Inline Comment Thread */}
                     {isCommentsOpen && (
                       <div className="border-t border-slate-100 pt-4 mt-3 space-y-4 animate-fade-in">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Discussion</h4>
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('Discussion')}</h4>
                         
                         {/* List of Comments */}
                         {c.comments && c.comments.length > 0 ? (
@@ -562,7 +594,7 @@ export default function AllGrievancesPage() {
                                 </div>
                                 <div className="space-y-0.5 flex-1">
                                   <div className="flex justify-between items-center font-semibold text-slate-700">
-                                    <span>{comment.citizenName || 'Citizen'}</span>
+                                    <span>{comment.citizenName || t('Citizen')}</span>
                                     <span className="text-[10px] text-slate-400 font-normal">{timeAgo(comment.createdAt)}</span>
                                   </div>
                                   <p className="text-slate-600 leading-relaxed">{comment.commentText}</p>
@@ -571,7 +603,7 @@ export default function AllGrievancesPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">No comments yet. Be the first to share your input!</p>
+                          <p className="text-xs text-slate-400 italic">{t('No comments yet. Be the first to share your input!') || 'No comments yet. Be the first to share your input!'}</p>
                         )}
 
                         {/* Add Comment Form */}
@@ -579,7 +611,7 @@ export default function AllGrievancesPage() {
                           <form onSubmit={(e) => handleCommentSubmit(e, c._id)} className="flex gap-2">
                             <input 
                               type="text" 
-                              placeholder="Write a comment..." 
+                              placeholder={t('Write a comment...')} 
                               value={commentInputs[c._id] || ''}
                               onChange={(e) => setCommentInputs(prev => ({ ...prev, [c._id]: e.target.value }))}
                               className="input flex-1 py-2 text-xs"
@@ -591,7 +623,7 @@ export default function AllGrievancesPage() {
                               disabled={submittingComment[c._id]}
                               className="btn-primary text-xs py-2 px-4 shadow-sm"
                             >
-                              Post
+                              {t('Post')}
                             </button>
                           </form>
                         ) : (

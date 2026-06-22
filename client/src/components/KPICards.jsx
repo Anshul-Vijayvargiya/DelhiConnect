@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 export default function KPICards({ data, loading }) {
+  const { t } = useTranslation();
   const cards = [
     {
       label: 'Total Complaints',
@@ -91,7 +94,7 @@ export default function KPICards({ data, loading }) {
             <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
             <div className="flex items-center gap-1.5 mt-1">
               <span>{card.icon}</span>
-              <span className="text-xs text-slate-500 font-medium">{card.label}</span>
+              <span className="text-xs text-slate-500 font-medium">{t(card.label)}</span>
             </div>
           </div>
         ))}
@@ -100,7 +103,7 @@ export default function KPICards({ data, loading }) {
       {/* Resolution rate bar */}
       {data?.total > 0 && (
         <div className="card p-4 flex items-center gap-4">
-          <span className="text-sm font-medium text-slate-600 whitespace-nowrap">Resolution Rate</span>
+          <span className="text-sm font-medium text-slate-600 whitespace-nowrap">{t('Resolution Rate')}</span>
           <div className="flex-1 bg-slate-100 rounded-full h-3">
             <div
               className="h-3 rounded-full bg-green-500 transition-all duration-700"

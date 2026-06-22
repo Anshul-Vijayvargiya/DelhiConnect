@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Layout from '../../components/Layout';
 import { analyticsAPI } from '../../services/api';
 import { CATEGORIES } from '../../utils/constants';
+import { useTranslation } from 'react-i18next';
 
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,6 +11,7 @@ import 'leaflet.heat';
 const DELHI_CENTER = [28.6139, 77.2090];
 
 export default function AdminHeatmap() {
+  const { t } = useTranslation();
   const mapContainerRef = useRef(null);
   const mapInstance = useRef(null);
   const heatLayerInstance = useRef(null);
@@ -81,10 +83,10 @@ export default function AdminHeatmap() {
         interactive: true
       })
       .bindTooltip(`
-        <div class="bg-white text-slate-800 rounded shadow-sm">
-          <div class="font-bold text-sm mb-1">${p.category}</div>
-          <div class="text-xs">Status: <span class="font-semibold">${p.status}</span></div>
-          ${p.isHotspot ? `<div class="text-xs text-red-600 font-bold mt-1">🔥 Active Hotspot (${p.reporterCount} reports)</div>` : ''}
+        <div class="bg-white text-slate-800 rounded shadow-sm p-1.5 border border-slate-100">
+          <div class="font-bold text-sm mb-1">${t(p.category)}</div>
+          <div class="text-xs">${t('Status')}: <span class="font-semibold">${t(p.status)}</span></div>
+          ${p.isHotspot ? `<div class="text-xs text-red-600 font-bold mt-1">🔥 ${t('Hotspot')} (${p.reporterCount} ${t('Reports')})</div>` : ''}
         </div>
       `, { direction: 'top', offset: [0, -10] })
       .addTo(markerGroup);
@@ -109,7 +111,7 @@ export default function AdminHeatmap() {
       }
     }).addTo(mapInstance.current);
 
-  }, [points, categoryFilter]);
+  }, [points, categoryFilter, t]);
 
   return (
     <Layout title="Complaint Heatmap — Delhi NCT">
@@ -117,16 +119,16 @@ export default function AdminHeatmap() {
         {/* Controls */}
         <div className="card p-4 flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Filter by Category</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t('Filter by Category')}</label>
             <select className="input w-48" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-              <option value="">All Categories ({points.length} points)</option>
+              <option value="">{t('All Categories')} ({points.length} {t('points') || 'points'})</option>
               {CATEGORIES.map(c => (
-                <option key={c} value={c}>{c} ({points.filter(p => p.category === c).length})</option>
+                <option key={c} value={c}>{t(c)} ({points.filter(p => p.category === c).length})</option>
               ))}
             </select>
           </div>
           <div className="text-sm text-slate-500">
-            Showing <strong>{categoryFilter ? points.filter(p => p.category === categoryFilter).length : points.length}</strong> complaint locations
+            {t('Showing')} <strong>{categoryFilter ? points.filter(p => p.category === categoryFilter).length : points.length}</strong> {t('complaint locations')}
           </div>
         </div>
 
@@ -139,7 +141,7 @@ export default function AdminHeatmap() {
             <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10">
               <div className="flex flex-col items-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
-                <p className="text-slate-600 font-medium">Loading map data...</p>
+                <p className="text-slate-600 font-medium">{t('Loading map data...')}</p>
               </div>
             </div>
           )}
@@ -147,7 +149,7 @@ export default function AdminHeatmap() {
 
         {/* Legend */}
         <div className="card p-4">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Heatmap Intensity (Weight)</h3>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">{t('Heatmap Intensity (Weight)')}</h3>
           <div className="flex flex-wrap gap-6 text-sm">
             {[
               { label: 'Critical / Hotspot', color: 'bg-red-600' },
@@ -157,7 +159,7 @@ export default function AdminHeatmap() {
             ].map(item => (
               <div key={item.label} className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full shadow-md ${item.color}`} />
-                <span className="text-slate-600 font-medium">{item.label}</span>
+                <span className="text-slate-600 font-medium">{t(item.label)}</span>
               </div>
             ))}
           </div>
